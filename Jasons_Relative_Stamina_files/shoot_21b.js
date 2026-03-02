@@ -7,14 +7,318 @@ var canvas,
    ;
 //see valDocReference.txt to see what these values are corresponding to
 //index = line number
-var val = getStringArraySpecial("Jasons_Relative_Stamina_files/shootValDoc21bRGB.txt");
+var SETTINGS_DEFAULT_PATH = "settings/defaults.json";
+var PRESET_STORAGE_KEY = "poetryCommand.presets.v1";
+
+function getBuiltInDefaultSettings()
+{
+	return {
+		canvas: { r: 0, g: 49, b: 187 },
+		laser: {
+			total: 100,
+			vertical: false,
+			speed: 20,
+			spacing: 27,
+			font: "Open Sans",
+			size: "14pt",
+			color: { r: 0, g: 0, b: 0, a: 1 },
+			interval: 50,
+			spray: true
+		},
+		enemy: {
+			total: 12,
+			interval: 500,
+			vertical: false,
+			baseSpeed: 2,
+			speedVariation: 12,
+			spacing: 20,
+			font: "Arvo",
+			size: "20pt",
+			color: { r: 255, g: 255, b: 255, a: 1 }
+		},
+		fragment: {
+			fadeSpeed: 20,
+			baseSpeed: 3,
+			speedVariation: 17,
+			size: "20pt",
+			font: "Arvo",
+			colorRate: 10,
+			color: { r: 156, g: 100, b: 50, a: 1 }
+		}
+	};
+}
+
+function cloneSettings(obj)
+{
+	return JSON.parse(JSON.stringify(obj));
+}
+
+function toIntOrDefault(value, defaultValue)
+{
+	var parsed = parseInt(value, 10);
+	return isNaN(parsed) ? defaultValue : parsed;
+}
+
+function toNumberOrDefault(value, defaultValue)
+{
+	var parsed = parseFloat(value);
+	return isNaN(parsed) ? defaultValue : parsed;
+}
+
+function toBoolOrDefault(value, defaultValue)
+{
+	if (value === true || value === false) {
+		return value;
+	}
+	if (value === "true") {
+		return true;
+	}
+	if (value === "false") {
+		return false;
+	}
+	return defaultValue;
+}
+
+function normalizeSettings(raw)
+{
+	var base = getBuiltInDefaultSettings();
+	var n = cloneSettings(base);
+	if (!raw) {
+		return n;
+	}
+
+	if (raw.canvas) {
+		n.canvas.r = toIntOrDefault(raw.canvas.r, n.canvas.r);
+		n.canvas.g = toIntOrDefault(raw.canvas.g, n.canvas.g);
+		n.canvas.b = toIntOrDefault(raw.canvas.b, n.canvas.b);
+	}
+
+	if (raw.laser) {
+		n.laser.total = toIntOrDefault(raw.laser.total, n.laser.total);
+		n.laser.vertical = toBoolOrDefault(raw.laser.vertical, n.laser.vertical);
+		n.laser.speed = toIntOrDefault(raw.laser.speed, n.laser.speed);
+		n.laser.spacing = toIntOrDefault(raw.laser.spacing, n.laser.spacing);
+		n.laser.font = raw.laser.font || n.laser.font;
+		n.laser.size = (raw.laser.size || n.laser.size).toString();
+		n.laser.interval = toIntOrDefault(raw.laser.interval, n.laser.interval);
+		n.laser.spray = toBoolOrDefault(raw.laser.spray, n.laser.spray);
+		if (raw.laser.color) {
+			n.laser.color.r = toIntOrDefault(raw.laser.color.r, n.laser.color.r);
+			n.laser.color.g = toIntOrDefault(raw.laser.color.g, n.laser.color.g);
+			n.laser.color.b = toIntOrDefault(raw.laser.color.b, n.laser.color.b);
+			n.laser.color.a = toNumberOrDefault(raw.laser.color.a, n.laser.color.a);
+		}
+	}
+
+	if (raw.enemy) {
+		n.enemy.total = toIntOrDefault(raw.enemy.total, n.enemy.total);
+		n.enemy.interval = toIntOrDefault(raw.enemy.interval, n.enemy.interval);
+		n.enemy.vertical = toBoolOrDefault(raw.enemy.vertical, n.enemy.vertical);
+		n.enemy.baseSpeed = toIntOrDefault(raw.enemy.baseSpeed, n.enemy.baseSpeed);
+		n.enemy.speedVariation = toIntOrDefault(raw.enemy.speedVariation, n.enemy.speedVariation);
+		n.enemy.spacing = toIntOrDefault(raw.enemy.spacing, n.enemy.spacing);
+		n.enemy.font = raw.enemy.font || n.enemy.font;
+		n.enemy.size = (raw.enemy.size || n.enemy.size).toString();
+		if (raw.enemy.color) {
+			n.enemy.color.r = toIntOrDefault(raw.enemy.color.r, n.enemy.color.r);
+			n.enemy.color.g = toIntOrDefault(raw.enemy.color.g, n.enemy.color.g);
+			n.enemy.color.b = toIntOrDefault(raw.enemy.color.b, n.enemy.color.b);
+			n.enemy.color.a = toNumberOrDefault(raw.enemy.color.a, n.enemy.color.a);
+		}
+	}
+
+	if (raw.fragment) {
+		n.fragment.fadeSpeed = toIntOrDefault(raw.fragment.fadeSpeed, n.fragment.fadeSpeed);
+		n.fragment.baseSpeed = toIntOrDefault(raw.fragment.baseSpeed, n.fragment.baseSpeed);
+		n.fragment.speedVariation = toIntOrDefault(raw.fragment.speedVariation, n.fragment.speedVariation);
+		n.fragment.size = (raw.fragment.size || n.fragment.size).toString();
+		n.fragment.font = raw.fragment.font || n.fragment.font;
+		n.fragment.colorRate = toIntOrDefault(raw.fragment.colorRate, n.fragment.colorRate);
+		if (raw.fragment.color) {
+			n.fragment.color.r = toIntOrDefault(raw.fragment.color.r, n.fragment.color.r);
+			n.fragment.color.g = toIntOrDefault(raw.fragment.color.g, n.fragment.color.g);
+			n.fragment.color.b = toIntOrDefault(raw.fragment.color.b, n.fragment.color.b);
+			n.fragment.color.a = toNumberOrDefault(raw.fragment.color.a, n.fragment.color.a);
+		}
+	}
+
+	return n;
+}
+
+function settingsToValArray(settings)
+{
+	return [
+		"Origin2",
+		settings.canvas.r.toString(),
+		settings.canvas.g.toString(),
+		settings.canvas.b.toString(),
+		settings.laser.total.toString(),
+		settings.laser.vertical ? "true" : "false",
+		settings.laser.speed.toString(),
+		settings.laser.spacing.toString(),
+		settings.laser.font,
+		settings.laser.size.toString(),
+		settings.laser.color.r.toString(),
+		settings.laser.color.g.toString(),
+		settings.laser.color.b.toString(),
+		settings.laser.color.a.toString(),
+		settings.enemy.total.toString(),
+		settings.enemy.interval.toString(),
+		settings.enemy.vertical ? "true" : "false",
+		settings.enemy.baseSpeed.toString(),
+		settings.enemy.speedVariation.toString(),
+		settings.enemy.spacing.toString(),
+		settings.enemy.font,
+		settings.enemy.size.toString(),
+		settings.enemy.color.r.toString(),
+		settings.enemy.color.g.toString(),
+		settings.enemy.color.b.toString(),
+		settings.enemy.color.a.toString(),
+		settings.fragment.fadeSpeed.toString(),
+		settings.fragment.baseSpeed.toString(),
+		settings.fragment.speedVariation.toString(),
+		settings.fragment.size.toString(),
+		settings.fragment.font,
+		settings.fragment.colorRate.toString(),
+		settings.fragment.color.r.toString(),
+		settings.fragment.color.g.toString(),
+		settings.fragment.color.b.toString(),
+		settings.fragment.color.a.toString(),
+		settings.laser.interval.toString(),
+		settings.laser.spray ? "true" : "false"
+	];
+}
+
+function getJSONSettings(curFile)
+{
+	var request = getHTTPObject();
+	if (!request) {
+		return null;
+	}
+
+	try {
+		request.open("GET", curFile, false);
+		request.send(null);
+		if (request.status >= 200 && request.status < 300 && request.responseText) {
+			return JSON.parse(request.responseText);
+		}
+	} catch (err) {
+		return null;
+	}
+	return null;
+}
+
+function loadDefaultSettings()
+{
+	var json = getJSONSettings(SETTINGS_DEFAULT_PATH);
+	return normalizeSettings(json);
+}
+
+function applyValArray(nextVal)
+{
+	val = nextVal;
+	cHSL = new Array(parseInt(val[1]),parseInt(val[2]),parseInt(val[3]));
+	if (canvas) {
+		canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
+	}
+
+	laserTotal = parseInt(val[4]);
+	laserVertical = (val[5] === "true");
+	laserSpeed = parseInt(val[6]);
+	laserCspace = parseInt(val[7]);
+	laserInterval = parseInt(val[36]);
+	isSpray = (val[37] === "true");
+	laserFont = val[8];
+	laserSize = val[9];
+	laserStyle=laserSize+" "+laserFont;
+	lHSLA = new Array(parseInt(val[10]),parseInt(val[11]),parseInt(val[12]),parseInt(val[13]));
+	laserColor = "rgba("+lHSLA[0]+","+lHSLA[1]+","+lHSLA[2]+","+lHSLA[3]+")";
+
+	enemyTotal =parseInt(val[14]);
+	enemyInterval =parseInt( val[15]);
+	enemyVertical = (val[16] === "true");
+	enemySpeedBase = parseInt(val[17]);
+	enemySpeedVar = parseInt( val[18]);
+	enemyCspace = parseInt( val[19]);
+	enemyFont = val[20];
+	enemySize = val[21];
+	enemyStyle = enemySize +" "+enemyFont;
+	eHSLA = new Array(parseInt(val[22]),parseInt(val[23]),parseInt(val[24]),parseInt(val[25]));
+	enemyColor = "rgba("+eHSLA[0]+","+eHSLA[1]+","+eHSLA[2]+","+eHSLA[3]+")";
+
+	fragmentFadeSpeed =parseInt(val[26]);
+	fragmentSpeedBase = parseInt(val[27]);
+	fragmentSpeedVar =parseInt(val[28]);
+	fragments = [];
+	fragmentSize = val[29];
+	fragmentFont = val[30];
+	fragmentStyle = fragmentSize+" "+fragmentFont;
+	colorRate = parseInt(val[31]);
+	fHSLA = new Array(parseInt(val[32]),parseInt(val[33]),parseInt(val[34]),parseInt(val[35]));
+	fragmentColor = "rgba("+fHSLA[0]+","+fHSLA[1]+","+fHSLA[2]+","+fHSLA[3]+")";
+}
+
+function applySettingsObject(settingsObj)
+{
+	applyValArray(settingsToValArray(normalizeSettings(settingsObj)));
+	updateValText();
+}
+
+function getCurrentSettings()
+{
+	return normalizeSettings({
+		canvas: { r: cHSL[0], g: cHSL[1], b: cHSL[2] },
+		laser: {
+			total: laserTotal,
+			vertical: laserVertical,
+			speed: laserSpeed,
+			spacing: laserCspace,
+			font: laserFont,
+			size: laserSize,
+			color: { r: lHSLA[0], g: lHSLA[1], b: lHSLA[2], a: lHSLA[3] },
+			interval: laserInterval,
+			spray: !!isSpray
+		},
+		enemy: {
+			total: enemyTotal,
+			interval: enemyInterval,
+			vertical: enemyVertical,
+			baseSpeed: enemySpeedBase,
+			speedVariation: enemySpeedVar,
+			spacing: enemyCspace,
+			font: enemyFont,
+			size: enemySize,
+			color: { r: eHSLA[0], g: eHSLA[1], b: eHSLA[2], a: eHSLA[3] }
+		},
+		fragment: {
+			fadeSpeed: fragmentFadeSpeed,
+			baseSpeed: fragmentSpeedBase,
+			speedVariation: fragmentSpeedVar,
+			size: fragmentSize,
+			font: fragmentFont,
+			colorRate: colorRate,
+			color: { r: fHSLA[0], g: fHSLA[1], b: fHSLA[2], a: fHSLA[3] }
+		}
+	});
+}
+
+function resetVals (isOrigin)
+{
+	if (isOrigin) {
+		applySettingsObject(getBuiltInDefaultSettings());
+	} else {
+		applySettingsObject(loadDefaultSettings());
+	}
+}
+
+var val = settingsToValArray(loadDefaultSettings());
 //console.log(val);
 var cHSL = new Array(parseInt(val[1]),parseInt(val[2]),parseInt(val[3]));
 
 
 //this feature was added later, that's why it's out of order.
 var laserInterval = parseInt(val[36]);
-var isSpray			= val[37];
+var isSpray			= (val[37] === "true");
 //range 1-15
 var laserTotal = parseInt(val[4]);
 //boolean
@@ -112,81 +416,6 @@ var mouseCurDown = false;
 window.onload = function() {
   init();  //example function call.
 }
-function resetVals (isOrigin)
-{
-if(isOrigin)
-{
-	val = getStringArraySpecial("Jasons_Relative_Stamina_files/shootValDoc_Origin21bRGB.txt");
-}else
-{
-	val = getStringArraySpecial("Jasons_Relative_Stamina_files/shootValDoc21bRGB.txt");
-}
-//console.log(val);
-cHSL = new Array(parseInt(val[1]),parseInt(val[2]),parseInt(val[3]));
-canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
-  
-//range 1-15
-laserTotal = parseInt(val[4]);
-//boolean
-laserVertical = (val[5] === "true");
-//2-25
-laserSpeed = parseInt(val[6]);
-//5-50
-laserCspace = parseInt(val[7]);
-
-laserInterval = parseInt(val[36]);
-isSpray			= val[37];
-//allfonts
-laserFont = val[8];
-//5-50
-laserSize = val[9];
-laserStyle=laserSize+" "+laserFont;
-
-/*var laserH = 290;
-var laserS = 100;
-var laserL = 39;
-var laserA = 1;*/
-lHSLA = new Array(parseInt(val[10]),parseInt(val[11]),parseInt(val[12]),parseInt(val[13]));
-laserColor = "rgba("+lHSLA[0]+","+lHSLA[1]+","+lHSLA[2]+","+lHSLA[3]+")";
-//ENEMIES
-//range 1-25
-enemyTotal =parseInt(val[14]);
-//50-5000
-enemyInterval =parseInt( val[15]); //in milli	
-//boolean
-enemyVertical = (val[16] === "true");
-//1-10
-enemySpeedBase = parseInt(val[17]);
-//0-20
-enemySpeedVar = parseInt( val[18]);
-//5-50
-enemyCspace = parseInt( val[19]);
-//all fonts
-enemyFont = val[20];
-//5-50
-enemySize = val[21];
-enemyStyle = enemySize +" "+enemyFont;
-eHSLA = new Array(parseInt(val[22]),parseInt(val[23]),parseInt(val[24]),parseInt(val[25]));
-enemyColor = "rgba("+eHSLA[0]+","+eHSLA[1]+","+eHSLA[2]+","+eHSLA[3]+")";
-
-//FRAGMENTS
-//1-10	
-fragmentFadeSpeed =parseInt(val[26]);
-//1-10
-fragmentSpeedBase = parseInt(val[27]);
-//1-20
-fragmentSpeedVar =parseInt(val[28]);
-fragments = [];
-fragmentSize = val[29];
-fragmentFont = val[30];
-fragmentStyle = fragmentSize+" "+fragmentFont;
-colorRate = parseInt(val[31]);
-
-fHSLA = new Array(parseInt(val[32]),parseInt(val[33]),parseInt(val[34]),parseInt(val[35]));
-fragmentColor = "rgba("+fHSLA[0]+","+fHSLA[1]+","+fHSLA[2]+","+fHSLA[3]+")";
-
-
-}
 function clearCanvas() {
   ctx.clearRect(0,0,width,height);
 }
@@ -224,10 +453,12 @@ canvas.addEventListener('mousedown', mouseIsDown, false);
 canvas.addEventListener('mouseup', mouseIsUp, false); 
 canvas.addEventListener('click', spawnLaser, false); 
 
-ctx.textBaseline="middle";
-ctx.textAlign = "center";
+	ctx.textBaseline="middle";
+	ctx.textAlign = "center";
 
-updateValText();
+	updateValText();
+	refreshPresetSelect();
+	setSettingsStatus("Defaults loaded from settings/defaults.json", false);
 
 }	  
 //spawn enemies regularly
@@ -812,7 +1043,7 @@ function drawEnemy()
 var laserVPressed = false;
 var interfacePressed = false;
 
-var interfaceVisible = false;
+var interfaceVisible = true;
 function keyDown(e) {
           //e.preventDefault();
       var evtobj = window.event? event : e
@@ -938,19 +1169,25 @@ function getLocalText(curFile)
 function getStringArray(curFile)
 {
 	var localText = getLocalText(curFile);
-	if (localText !== null) {
-		return localText.split(/[\s ]+/);
-	}
-
 	var request = getHTTPObject();
 	var wordArray = [];
 	if (request) {
 		request.onreadystatechange = function() {
 			wordArray =request.responseText.split(/[\s ]+/);
 		};
-		request.open("GET", curFile, false);
-		request.send(null);
-		return wordArray;
+		try {
+			request.open("GET", curFile, false);
+			request.send(null);
+			if (request.status >= 200 && request.status < 300 && wordArray.length > 0) {
+				return wordArray;
+			}
+		} catch (err) {
+			// fall back to embedded text below
+		}
+	}
+
+	if (localText !== null) {
+		return localText.split(/[\s ]+/);
 	}
 
 	return wordArray;
@@ -960,19 +1197,25 @@ function getStringArray(curFile)
 function getStringArraySpecial(curFile)
 {
 	var localText = getLocalText(curFile);
-	if (localText !== null) {
-		return localText.split(/[\n\r]+/);
-	}
-
 	var request = getHTTPObject();
 	var wordArray = [];
 	if (request) {
 		request.onreadystatechange = function() {
 			wordArray =request.responseText.split(/[\n\r]+/);
 		};
-		request.open("GET", curFile, false);
-		request.send(null);
-		return wordArray;
+		try {
+			request.open("GET", curFile, false);
+			request.send(null);
+			if (request.status >= 200 && request.status < 300 && wordArray.length > 0) {
+				return wordArray;
+			}
+		} catch (err) {
+			// fall back to embedded text below
+		}
+	}
+
+	if (localText !== null) {
+		return localText.split(/[\n\r]+/);
 	}
 
 	return wordArray;
@@ -996,8 +1239,6 @@ function getHTTPObject() {
   }
   return xhr;
 }
-
-window.onload = init;
 
 function updateLaserVal(reference)
 {
@@ -1293,6 +1534,22 @@ console.log(fragmentVal);*/
 	document.getElementById("lHue").innerHTML=" "+lHSLA[0];
 	document.getElementById("lSat").innerHTML=" "+lHSLA[1];
 	document.getElementById("lLig").innerHTML=" "+lHSLA[2];
+	document.getElementById("laInterval").value = laserInterval;
+	document.getElementById("laTInterval").value = laserInterval;
+	document.getElementById("laSpacing").value = laserCspace;
+	document.getElementById("laTSpacing").value = laserCspace;
+	document.getElementById("laSize").value = parseInt(laserSize, 10);
+	document.getElementById("laTSize").value = parseInt(laserSize, 10);
+	document.getElementById("laSpeed").value = laserSpeed;
+	document.getElementById("laTSpeed").value = laserSpeed;
+	document.getElementById("laTotal").value = laserTotal;
+	document.getElementById("laTTotal").value = laserTotal;
+	document.getElementById("laHue").value = lHSLA[0];
+	document.getElementById("laTHue").value = lHSLA[0];
+	document.getElementById("laSat").value = lHSLA[1];
+	document.getElementById("laTSat").value = lHSLA[1];
+	document.getElementById("laLig").value = lHSLA[2];
+	document.getElementById("laTLig").value = lHSLA[2];
 	//console.log(lHSLA);
 	
 	//ENEMIES
@@ -1310,6 +1567,24 @@ console.log(fragmentVal);*/
 	document.getElementById("eHue").innerHTML=" "+eHSLA[0];
 	document.getElementById("eSat").innerHTML=" "+eHSLA[1];
 	document.getElementById("eLig").innerHTML=" "+eHSLA[2];
+	document.getElementById("enSpacing").value = enemyCspace;
+	document.getElementById("enTSpacing").value = enemyCspace;
+	document.getElementById("enInterval").value = enemyInterval;
+	document.getElementById("enTInterval").value = enemyInterval;
+	document.getElementById("enSize").value = parseInt(enemySize, 10);
+	document.getElementById("enTSize").value = parseInt(enemySize, 10);
+	document.getElementById("enBSpeed").value = enemySpeedBase;
+	document.getElementById("enTBSpeed").value = enemySpeedBase;
+	document.getElementById("enSpeed").value = enemySpeedVar;
+	document.getElementById("enTSpeed").value = enemySpeedVar;
+	document.getElementById("enTotal").value = enemyTotal;
+	document.getElementById("enTTotal").value = enemyTotal;
+	document.getElementById("enHue").value = eHSLA[0];
+	document.getElementById("enTHue").value = eHSLA[0];
+	document.getElementById("enSat").value = eHSLA[1];
+	document.getElementById("enTSat").value = eHSLA[1];
+	document.getElementById("enLig").value = eHSLA[2];
+	document.getElementById("enTLig").value = eHSLA[2];
 	
 	
 	//FRAGMENT
@@ -1321,11 +1596,33 @@ console.log(fragmentVal);*/
 	document.getElementById("fSat").innerHTML=" "+fHSLA[1];
 	document.getElementById("fLig").innerHTML=" "+fHSLA[2];
 	document.getElementById("fRate").innerHTML=" "+(colorRate/2);
+	document.getElementById("frSize").value = parseInt(fragmentSize, 10);
+	document.getElementById("frTSize").value = parseInt(fragmentSize, 10);
+	document.getElementById("frFade").value = fragmentFadeSpeed;
+	document.getElementById("frTFade").value = fragmentFadeSpeed;
+	document.getElementById("frBSpeed").value = fragmentSpeedBase;
+	document.getElementById("frTBSpeed").value = fragmentSpeedBase;
+	document.getElementById("frSpeed").value = fragmentSpeedVar;
+	document.getElementById("frTSpeed").value = fragmentSpeedVar;
+	document.getElementById("frHue").value = fHSLA[0];
+	document.getElementById("frTHue").value = fHSLA[0];
+	document.getElementById("frSat").value = fHSLA[1];
+	document.getElementById("frTSat").value = fHSLA[1];
+	document.getElementById("frLig").value = fHSLA[2];
+	document.getElementById("frTLig").value = fHSLA[2];
+	document.getElementById("frRate").value = colorRate * 2;
+	document.getElementById("frTRate").value = colorRate * 2;
 
 	//CANVAS
 	document.getElementById("cHue").innerHTML=" "+cHSL[0];
 	document.getElementById("cSat").innerHTML=" "+cHSL[1];
 	document.getElementById("cLig").innerHTML=" "+cHSL[2];
+	document.getElementById("caHue").value = cHSL[0];
+	document.getElementById("caTHue").value = cHSL[0];
+	document.getElementById("caSat").value = cHSL[1];
+	document.getElementById("caTSat").value = cHSL[1];
+	document.getElementById("caLig").value = cHSL[2];
+	document.getElementById("caTLig").value = cHSL[2];
 }
 
 function updateCanvasVal(reference)
@@ -1380,3 +1677,106 @@ function getValueString()
 	//var divGuide = document.getElementById("Test");
 }
 
+function getPresetMap()
+{
+	try {
+		var raw = localStorage.getItem(PRESET_STORAGE_KEY);
+		if (!raw) {
+			return {};
+		}
+		var parsed = JSON.parse(raw);
+		return parsed && typeof parsed === "object" ? parsed : {};
+	} catch (err) {
+		return {};
+	}
+}
+
+function savePresetMap(presetMap)
+{
+	localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presetMap));
+}
+
+function setSettingsStatus(message, isError)
+{
+	var statusEl = document.getElementById("settingsStatus");
+	if (!statusEl) {
+		return;
+	}
+	statusEl.style.color = isError ? "#fda4af" : "#93c5fd";
+	statusEl.textContent = message;
+}
+
+function refreshPresetSelect()
+{
+	var select = document.getElementById("settingsPresetList");
+	if (!select) {
+		return;
+	}
+	var presets = getPresetMap();
+	var names = Object.keys(presets).sort();
+	select.innerHTML = "";
+	for (var i = 0; i < names.length; i++) {
+		var option = document.createElement("option");
+		option.value = names[i];
+		option.textContent = names[i];
+		select.appendChild(option);
+	}
+	if (names.length > 0) {
+		select.selectedIndex = 0;
+	}
+}
+
+function saveNamedPreset()
+{
+	var input = document.getElementById("settingsPresetName");
+	if (!input) {
+		return;
+	}
+	var name = input.value.trim();
+	if (!name) {
+		setSettingsStatus("Preset name is required.", true);
+		return;
+	}
+	var presets = getPresetMap();
+	presets[name] = getCurrentSettings();
+	savePresetMap(presets);
+	refreshPresetSelect();
+	document.getElementById("settingsPresetList").value = name;
+	setSettingsStatus("Saved preset: " + name, false);
+}
+
+function loadSelectedPreset()
+{
+	var select = document.getElementById("settingsPresetList");
+	if (!select || !select.value) {
+		setSettingsStatus("Select a preset to load.", true);
+		return;
+	}
+	var presets = getPresetMap();
+	if (!presets[select.value]) {
+		setSettingsStatus("Preset not found.", true);
+		return;
+	}
+	applySettingsObject(presets[select.value]);
+	setSettingsStatus("Loaded preset: " + select.value, false);
+}
+
+function deleteSelectedPreset()
+{
+	var select = document.getElementById("settingsPresetList");
+	if (!select || !select.value) {
+		setSettingsStatus("Select a preset to delete.", true);
+		return;
+	}
+	var presets = getPresetMap();
+	delete presets[select.value];
+	savePresetMap(presets);
+	refreshPresetSelect();
+	setSettingsStatus("Deleted preset.", false);
+}
+
+function loadDefaultSettingsFromFile()
+{
+	applySettingsObject(loadDefaultSettings());
+	setSettingsStatus("Reloaded defaults from settings/defaults.json", false);
+}
