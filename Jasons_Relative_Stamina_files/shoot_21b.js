@@ -915,10 +915,21 @@ function keyUp(e) {
 
 function getLocalText(curFile)
 {
-	if (window.STAMINA_LOCAL_TEXT && Object.prototype.hasOwnProperty.call(window.STAMINA_LOCAL_TEXT, curFile))
+	if (!window.STAMINA_LOCAL_TEXT) {
+		return null;
+	}
+
+	if (Object.prototype.hasOwnProperty.call(window.STAMINA_LOCAL_TEXT, curFile))
 	{
 		return window.STAMINA_LOCAL_TEXT[curFile];
 	}
+
+	var fileName = curFile.split('/').pop();
+	if (Object.prototype.hasOwnProperty.call(window.STAMINA_LOCAL_TEXT, fileName))
+	{
+		return window.STAMINA_LOCAL_TEXT[fileName];
+	}
+
 	return null;
 }
 
@@ -927,7 +938,7 @@ function getLocalText(curFile)
 function getStringArray(curFile)
 {
 	var localText = getLocalText(curFile);
-	if (window.location && window.location.protocol === "file:" && localText !== null) {
+	if (localText !== null) {
 		return localText.split(/[\s ]+/);
 	}
 
@@ -939,16 +950,9 @@ function getStringArray(curFile)
 		};
 		request.open("GET", curFile, false);
 		request.send(null);
-
-		if (wordArray.length === 0 && localText !== null) {
-			return localText.split(/[\s ]+/);
-		}
 		return wordArray;
 	}
 
-	if (localText !== null) {
-		return localText.split(/[\s ]+/);
-	}
 	return wordArray;
 
 }
@@ -956,7 +960,7 @@ function getStringArray(curFile)
 function getStringArraySpecial(curFile)
 {
 	var localText = getLocalText(curFile);
-	if (window.location && window.location.protocol === "file:" && localText !== null) {
+	if (localText !== null) {
 		return localText.split(/[\n\r]+/);
 	}
 
@@ -968,16 +972,9 @@ function getStringArraySpecial(curFile)
 		};
 		request.open("GET", curFile, false);
 		request.send(null);
-
-		if (wordArray.length === 0 && localText !== null) {
-			return localText.split(/[\n\r]+/);
-		}
 		return wordArray;
 	}
 
-	if (localText !== null) {
-		return localText.split(/[\n\r]+/);
-	}
 	return wordArray;
 
 }
