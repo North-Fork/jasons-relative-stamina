@@ -7,7 +7,7 @@ var canvas,
    ;
 //see valDocReference.txt to see what these values are corresponding to
 //index = line number
-var val = getStringArraySpecial("shootValDoc21bRGB.txt");
+var val = getStringArraySpecial("Jasons_Relative_Stamina_files/shootValDoc21bRGB.txt");
 //console.log(val);
 var cHSL = new Array(parseInt(val[1]),parseInt(val[2]),parseInt(val[3]));
 
@@ -100,9 +100,9 @@ var curEnIndex = 0;
 var curLaIndex = 0;
 var curFaIndex = 0;
 
-var enemySource = "ABDBody.txt";
-var laserSource = "ABDQuotes.txt";
-var fragmentSource ="ABDReferences.txt";
+var enemySource = "Jasons_Relative_Stamina_files/ABDBody.txt";
+var laserSource = "Jasons_Relative_Stamina_files/ABDQuotes.txt";
+var fragmentSource ="Jasons_Relative_Stamina_files/ABDReferences.txt";
 
 var valueString = "empty";
 
@@ -116,10 +116,10 @@ function resetVals (isOrigin)
 {
 if(isOrigin)
 {
-	val = getStringArraySpecial("shootValDoc_Origin21bRGB.txt");
+	val = getStringArraySpecial("Jasons_Relative_Stamina_files/shootValDoc_Origin21bRGB.txt");
 }else
 {
-	val = getStringArraySpecial("shootValDoc21bRGB.txt");
+	val = getStringArraySpecial("Jasons_Relative_Stamina_files/shootValDoc21bRGB.txt");
 }
 //console.log(val);
 cHSL = new Array(parseInt(val[1]),parseInt(val[2]),parseInt(val[3]));
