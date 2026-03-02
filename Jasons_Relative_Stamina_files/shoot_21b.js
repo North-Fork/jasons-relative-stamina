@@ -15,7 +15,7 @@ function getBuiltInDefaultSettings()
 	return {
 		canvas: { r: 0, g: 49, b: 187 },
 		laser: {
-			total: 100,
+			density: 100,
 			vertical: false,
 			speed: 20,
 			spacing: 27,
@@ -94,7 +94,8 @@ function normalizeSettings(raw)
 	}
 
 	if (raw.laser) {
-		n.laser.total = toIntOrDefault(raw.laser.total, n.laser.total);
+		n.laser.density = toIntOrDefault(raw.laser.density, n.laser.density);
+		n.laser.density = toIntOrDefault(raw.laser.total, n.laser.density);
 		n.laser.vertical = toBoolOrDefault(raw.laser.vertical, n.laser.vertical);
 		n.laser.speed = toIntOrDefault(raw.laser.speed, n.laser.speed);
 		n.laser.spacing = toIntOrDefault(raw.laser.spacing, n.laser.spacing);
@@ -152,7 +153,7 @@ function settingsToValArray(settings)
 		settings.canvas.r.toString(),
 		settings.canvas.g.toString(),
 		settings.canvas.b.toString(),
-		settings.laser.total.toString(),
+		settings.laser.density.toString(),
 		settings.laser.vertical ? "true" : "false",
 		settings.laser.speed.toString(),
 		settings.laser.spacing.toString(),
@@ -222,7 +223,7 @@ function applyValArray(nextVal)
 		canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
 	}
 
-	laserTotal = parseInt(val[4]);
+	laserDensity = parseInt(val[4]);
 	laserVertical = (val[5] === "true");
 	laserSpeed = parseInt(val[6]);
 	laserCspace = parseInt(val[7]);
@@ -269,7 +270,7 @@ function getCurrentSettings()
 	return normalizeSettings({
 		canvas: { r: cHSL[0], g: cHSL[1], b: cHSL[2] },
 		laser: {
-			total: laserTotal,
+			density: laserDensity,
 			vertical: laserVertical,
 			speed: laserSpeed,
 			spacing: laserCspace,
@@ -320,7 +321,7 @@ var cHSL = new Array(parseInt(val[1]),parseInt(val[2]),parseInt(val[3]));
 var laserInterval = parseInt(val[36]);
 var isSpray			= (val[37] === "true");
 //range 1-15
-var laserTotal = parseInt(val[4]);
+var laserDensity = parseInt(val[4]);
 //boolean
 var laserVertical = (val[5] === "true");
 //2-25
@@ -451,16 +452,88 @@ canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
 canvas.addEventListener('mousemove', function(evt) {mousePos = getMousePos( evt);}, false); 
 canvas.addEventListener('mousedown', mouseIsDown, false); 
 canvas.addEventListener('mouseup', mouseIsUp, false); 
-canvas.addEventListener('click', spawnLaser, false); 
 
 	ctx.textBaseline="middle";
 	ctx.textAlign = "center";
+	decorateControlLabels();
 
 	updateValText();
 	refreshPresetSelect();
 	setSettingsStatus("Defaults loaded from settings/defaults.json", false);
 
 }	  
+
+function getNextElementOrBreak(node)
+{
+	var n = node.nextSibling;
+	while (n) {
+		if (n.nodeType === 1) {
+			return n;
+		}
+		if (n.nodeType === 3 && n.nodeValue.trim() !== "") {
+			return null;
+		}
+		n = n.nextSibling;
+	}
+	return null;
+}
+
+function decorateControlLabels()
+{
+	var panel = document.getElementById('container');
+	if (!panel) {
+		return;
+	}
+
+	var walker = document.createTreeWalker(panel, NodeFilter.SHOW_TEXT, null, false);
+	var nodes = [];
+	var node;
+	while ((node = walker.nextNode())) {
+		nodes.push(node);
+	}
+
+	for (var i = 0; i < nodes.length; i++) {
+		var textNode = nodes[i];
+		var raw = textNode.nodeValue;
+		if (!raw || !raw.trim()) {
+			continue;
+		}
+		var parent = textNode.parentNode;
+		if (!parent || parent.nodeType !== 1) {
+			continue;
+		}
+		if (parent.classList && parent.classList.contains('control-label')) {
+			continue;
+		}
+		if (/^(H1|H2|OPTION|BUTTON|CODE|SPAN|SELECT|TEXTAREA)$/i.test(parent.nodeName)) {
+			continue;
+		}
+
+		var first = getNextElementOrBreak(textNode);
+		var target = first;
+		if (first && first.nodeName === "BR") {
+			target = getNextElementOrBreak(first);
+		}
+		if (!target || !/^(INPUT|SELECT)$/i.test(target.nodeName)) {
+			continue;
+		}
+
+		var labelText = raw.replace(/\s+/g, ' ').trim();
+		if (!labelText || labelText.length < 2) {
+			continue;
+		}
+		// Avoid wrapping content paragraphs.
+		if (labelText.length > 90) {
+			continue;
+		}
+
+		var span = document.createElement('span');
+		span.className = 'control-label';
+		span.textContent = labelText;
+		parent.replaceChild(span, textNode);
+		parent.insertBefore(document.createTextNode(' '), span.nextSibling);
+	}
+}
 //spawn enemies regularly
 setTimeout(spawnEnemy, enemyInterval);
 
@@ -495,14 +568,6 @@ function gameLoop() {
   drawFragments();
   checkCollision();
 
-if (mouseCurDown && isSpray && notBeingSprayed && !gamePaused){
-
-spawnLaser();
-setTimeout(sprayLaser, laserInterval);
-//console.log("Being pressed!");
-notBeingSprayed = false;
-}
-
 }
 
 
@@ -516,9 +581,29 @@ function sprayLaser ()
 	}
 }
 
-function mouseIsDown() {
+function mouseIsDown(evt) {
 mouseCurDown = true;
-//console.log(mouseCurDown);
+mousePos = getMousePos(evt);
+
+if(gamePaused)
+{
+	return;
+}
+
+if(isSpray)
+{
+	if(notBeingSprayed)
+	{
+		spawnLaser();
+		setTimeout(sprayLaser, laserInterval);
+		notBeingSprayed = false;
+	}
+}
+else
+{
+	// Single click should always emit exactly one word when spray is off.
+	spawnLaser();
+}
 }
 function mouseIsUp() {
 mouseCurDown = false;
@@ -747,33 +832,30 @@ function updateColor (curC, goalC)
 
 function spawnFragments(laser, enemy, originX, originY)
 {
+	var laserWord = (laser && laser.length) ? laser : "";
+	var enemyWord = (enemy && enemy.length) ? enemy : "";
 
-
-	var laserChar = characterArray(fragmentTxt[curFaIndex], "fragment", originX, originY);
-	curFaIndex ++;
-
-	if (curFaIndex > maxFaIndex)
-	{
-	curFaIndex = 0;
+	// Fallback only if both inputs are empty.
+	if (!laserWord && !enemyWord) {
+		laserWord = fragmentTxt[curFaIndex];
+		curFaIndex ++;
+		if (curFaIndex > maxFaIndex)
+		{
+			curFaIndex = 0;
+		}
 	}
-	for (var i=0; i<laserChar.length;i++)
-	{
-	fragments.push([laserChar[i][0],laserChar[i][1],laserChar[i][2],laserChar[i][3],laserChar[i][4],laserChar[i][5],laserChar[i][6],laserChar[i][7],laserChar[i][8],laserChar[i][9],laserChar[i][10],laserChar[i][11],laserChar[i][12]]);
-	//fragments.push([laserChar[i]]);
-	}
-	/*var laserChar = characterArray(laser, "laser", originX, originY);
-	var enemyChar = characterArray(laser, "enemy", originX, originY);
+
+	var laserChar = characterArray(laserWord, "laser", originX, originY);
+	var enemyChar = characterArray(enemyWord, "enemy", originX, originY);
 	
 	for (var i=0; i<laserChar.length;i++)
 	{
-	fragments.push([laserChar[i][0],laserChar[i][1],laserChar[i][2],laserChar[i][3],laserChar[i][4],laserChar[i][5],laserChar[i][6],laserChar[i][7],laserChar[i][8],laserChar[i][9],laserChar[i][10],laserChar[i][11],laserChar[i][12]]);
-	//fragments.push([laserChar[i]]);
-	}	
-	for (var i=0; i<enemyChar.length;i++)
+		fragments.push([laserChar[i][0],laserChar[i][1],laserChar[i][2],laserChar[i][3],laserChar[i][4],laserChar[i][5],laserChar[i][6],laserChar[i][7],laserChar[i][8],laserChar[i][9],laserChar[i][10],laserChar[i][11],laserChar[i][12]]);
+	}
+	for (var j=0; j<enemyChar.length;j++)
 	{
-	fragments.push([enemyChar[i][0],enemyChar[i][1],enemyChar[i][2],enemyChar[i][3],enemyChar[i][4],enemyChar[i][5],enemyChar[i][6],enemyChar[i][7],enemyChar[i][8],enemyChar[i][9],enemyChar[i][10],enemyChar[i][11],enemyChar[i][12]]);
-	}*/
-	//console.log();
+		fragments.push([enemyChar[j][0],enemyChar[j][1],enemyChar[j][2],enemyChar[j][3],enemyChar[j][4],enemyChar[j][5],enemyChar[j][6],enemyChar[j][7],enemyChar[j][8],enemyChar[j][9],enemyChar[j][10],enemyChar[j][11],enemyChar[j][12]]);
+	}
 }
 
 function moveFragments ()
@@ -821,7 +903,7 @@ function drawFragments()
 function spawnLaser()
 {
 
-  if(lasers.length < laserTotal)
+  if(lasers.length < laserDensity)
   {
 	//get vector of direction towards mouse
 	var vectorX = mousePos.x - originX;
@@ -919,12 +1001,16 @@ function drawLaser() {
 		//var laserStyle=laserSize+" "+laserFont;
 		ctx.font = laserStyle;
 		ctx.fillStyle = laserColor;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
 		
 		if(laserVertical)
 		{	
 			var tempWord = lasers[i][5].split("");
-			var tempX = 0;
-			var tempY = 0;
+			// Center the full character chain around the laser origin.
+			var centerOffset = ((tempWord.length - 1) * laserCspace) / 2;
+			var tempX = -centerOffset * lasers[i][2];
+			var tempY = -centerOffset * lasers[i][3];
 			
 			for (var c=tempWord.length-1; c>=0; c--)
 			{
@@ -1070,12 +1156,12 @@ function keyDown(e) {
 	  {
 	  //M/N change number of lasers
 		case 77: //m
-			laserTotal += 1;
+			laserDensity += 1;
 		break;
 		
 		case 78: //n
-			if (laserTotal >1)
-			laserTotal -= 1;
+			if (laserDensity >1)
+			laserDensity -= 1;
 		break;
 		case 80: //p
 			gamePaused = !gamePaused
@@ -1296,7 +1382,7 @@ var laserVal = document.getElementById(reference).value;
 	break;
 	case 'laTotal':
 	case 'laTTotal':
-		laserTotal= laserVal;
+		laserDensity= laserVal;
 		//document.getElementById("lTotal").innerHTML=" "+laserVal;
 	
 	break;
@@ -1530,7 +1616,7 @@ console.log(fragmentVal);*/
 	document.getElementById("lSpeed").innerHTML=" "+laserSpeed;
 	document.getElementById("lSpacing").innerHTML=" "+laserCspace;
 	document.getElementById("lSize").innerHTML=" "+laserSize;
-	document.getElementById("lTotal").innerHTML=" "+laserTotal;
+	document.getElementById("lTotal").innerHTML=" "+laserDensity;
 	document.getElementById("lHue").innerHTML=" "+lHSLA[0];
 	document.getElementById("lSat").innerHTML=" "+lHSLA[1];
 	document.getElementById("lLig").innerHTML=" "+lHSLA[2];
@@ -1542,8 +1628,8 @@ console.log(fragmentVal);*/
 	document.getElementById("laTSize").value = parseInt(laserSize, 10);
 	document.getElementById("laSpeed").value = laserSpeed;
 	document.getElementById("laTSpeed").value = laserSpeed;
-	document.getElementById("laTotal").value = laserTotal;
-	document.getElementById("laTTotal").value = laserTotal;
+	document.getElementById("laTotal").value = laserDensity;
+	document.getElementById("laTTotal").value = laserDensity;
 	document.getElementById("laHue").value = lHSLA[0];
 	document.getElementById("laTHue").value = lHSLA[0];
 	document.getElementById("laSat").value = lHSLA[1];
@@ -1653,7 +1739,7 @@ function updateCanvasVal(reference)
 		
 		break;
 		case 'caLog':
-		document.getElementById("cLog").innerHTML='<h2>Laser Options</h2>laserStyle = '+laserStyle+'</BR> laserVertical ='+laserVertical+'</BR> laserSpray = '+isSpray+'</BR> laser Spray Speed = '+laserInterval+'</BR>laserCspace = '+laserCspace+'</BR> laserSpeed = '+laserSpeed+'</BR> laserTotal = '+laserTotal+'</BR> laserColor = '+laserColor+'</BR><h2>Enemy Options</h2> enemyStyle = '+enemyStyle+'</BR> enemyVertical= '+enemyVertical+'</BR> enemyCspace = '+enemyCspace+'</BR> enemySpeedBase = '+enemySpeedBase+'</BR> enemySpeedVar = '+enemySpeedVar+'</BR> ememyTotal = '+enemyTotal+'</BR> enemyColor = '+enemyColor+'</BR> enemyInterval = '+enemyInterval+'<h2> Explosion Options</h2> fragmentStyle = '+fragmentStyle+'</BR> fragmentSpeedBase = '+fragmentSpeedBase+'</BR> fragmentSpeedVar = '+fragmentSpeedVar+'</BR> fragmentColor = '+fragmentColor+'</BR> color change rate = '+colorRate+'<h2>Canvas Options</h2> canvasColor = hsl('+cHSL[0]+','+cHSL[1]+'%,'+cHSL[2]+'%)';
+		document.getElementById("cLog").innerHTML='<h2>Laser Options</h2>laserStyle = '+laserStyle+'</BR> laserVertical ='+laserVertical+'</BR> laserSpray = '+isSpray+'</BR> laser Spray Speed = '+laserInterval+'</BR>laserCspace = '+laserCspace+'</BR> laserSpeed = '+laserSpeed+'</BR> laserDensity = '+laserDensity+'</BR> laserColor = '+laserColor+'</BR><h2>Enemy Options</h2> enemyStyle = '+enemyStyle+'</BR> enemyVertical= '+enemyVertical+'</BR> enemyCspace = '+enemyCspace+'</BR> enemySpeedBase = '+enemySpeedBase+'</BR> enemySpeedVar = '+enemySpeedVar+'</BR> ememyTotal = '+enemyTotal+'</BR> enemyColor = '+enemyColor+'</BR> enemyInterval = '+enemyInterval+'<h2> Explosion Options</h2> fragmentStyle = '+fragmentStyle+'</BR> fragmentSpeedBase = '+fragmentSpeedBase+'</BR> fragmentSpeedVar = '+fragmentSpeedVar+'</BR> fragmentColor = '+fragmentColor+'</BR> color change rate = '+colorRate+'<h2>Canvas Options</h2> canvasColor = hsl('+cHSL[0]+','+cHSL[1]+'%,'+cHSL[2]+'%)';
 		
 		break;
 	}
@@ -1669,7 +1755,7 @@ function getValueString()
 {
 //console.log(cHSL[2]);
 	valueString = /*"START!***"+*/cHSL[0].toString()+"***"+cHSL[1].toString()+"***"+cHSL[2].toString()+"***"+
-	laserTotal.toString()+"***"+laserVertical+"***"+laserSpeed.toString()+"***"+laserCspace.toString()+"***"+laserFont+"***"+laserSize+"***"+lHSLA[0].toString()+"***"+lHSLA[1].toString()+"***"+lHSLA[2].toString()+"***"+lHSLA[3].toString()+"***"+
+	laserDensity.toString()+"***"+laserVertical+"***"+laserSpeed.toString()+"***"+laserCspace.toString()+"***"+laserFont+"***"+laserSize+"***"+lHSLA[0].toString()+"***"+lHSLA[1].toString()+"***"+lHSLA[2].toString()+"***"+lHSLA[3].toString()+"***"+
 	enemyTotal.toString()+"***"+enemyInterval.toString()+"***"+enemyVertical+"***"+enemySpeedBase.toString()+"***"+enemySpeedVar.toString()+"***"+enemyCspace.toString()+"***"+enemyFont+"***"+enemySize+"***"+eHSLA[0].toString()+"***"+eHSLA[1].toString()+"***"+eHSLA[2].toString()+"***"+eHSLA[3].toString()+"***"+
 	fragmentFadeSpeed.toString()+"***"+fragmentSpeedBase.toString()+"***"+fragmentSpeedVar.toString()+"***"+fragmentSize+"***"+fragmentFont+"***"+colorRate.toString()+"***"+fHSLA[0].toString()+"***"+fHSLA[1].toString()+"***"+fHSLA[2].toString()+"***"+fHSLA[3].toString()+"***"+laserInterval.toString()+"***"+isSpray.toString()+"***"+document.getElementById("noteStringArea").value+"***"+"  ";
 

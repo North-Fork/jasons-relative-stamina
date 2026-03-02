@@ -5,7 +5,7 @@
     "b": 187
   },
   "laser": {
-    "total": 100,
+    "density": 100,
     "vertical": false,
     "speed": 20,
     "spacing": 27,
