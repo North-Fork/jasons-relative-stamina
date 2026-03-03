@@ -103,12 +103,12 @@ canvas {
 }
 
 #footer {
-	width: min(1000px, calc(100vw - 382px));
-	margin: 12px auto 12px 24px;
+	margin: 10px 0 18px;
+	font: 700 14px/1.2 "Aldrich", "Segoe UI", sans-serif;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 	text-align: center;
-	font-family: "Source Sans Pro", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-	font-size: 1rem;
-	color: #cbd5e1;
+	color: #ffffff;
 }
 
 #footer a {
@@ -122,6 +122,27 @@ canvas {
 #footer a:hover {
 	color: #eff6ff;
 	border-bottom-color: rgba(239, 246, 255, 0.9);
+}
+
+#currentAmendment {
+	margin: 10px 0 6px;
+	font: 700 15px/1.2 "Aldrich", "Segoe UI", sans-serif;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	text-align: center;
+	color: #ffffff;
+	min-height: 1.2em;
+}
+
+#crimesLine {
+	margin: 0 0 18px;
+	display: none;
+	font: 700 30px/1.2 "Aldrich", "Segoe UI", sans-serif;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	text-align: center;
+	color: #ffffff;
+	min-height: 1.2em;
 }
 
 #Test {
@@ -350,6 +371,17 @@ input[type="range"]::-moz-range-thumb {
 		width: calc(100vw - 32px);
 		font-size: 1rem;
 		margin: 10px auto 8px auto;
+	}
+
+	#currentAmendment {
+		width: calc(100vw - 32px);
+		margin: 10px auto 10px auto;
+	}
+
+	#crimesLine {
+		width: calc(100vw - 32px);
+		margin: 0 auto 10px auto;
+		font-size: 1.9rem;
 	}
 
 	#container {

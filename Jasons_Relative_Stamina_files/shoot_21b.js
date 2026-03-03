@@ -13,7 +13,7 @@ var PRESET_STORAGE_KEY = "poetryCommand.presets.v1";
 function getBuiltInDefaultSettings()
 {
 	return {
-		canvas: { r: 0, g: 49, b: 187 },
+		canvas: { r: 0, g: 0, b: 0 },
 		laser: {
 			density: 100,
 			vertical: false,
@@ -21,7 +21,7 @@ function getBuiltInDefaultSettings()
 			spacing: 27,
 			font: "Open Sans",
 			size: "14pt",
-			color: { r: 0, g: 0, b: 0, a: 1 },
+			color: { r: 255, g: 255, b: 255, a: 1 },
 			interval: 50,
 			spray: true
 		},
@@ -34,7 +34,7 @@ function getBuiltInDefaultSettings()
 			spacing: 20,
 			font: "Arvo",
 			size: "20pt",
-			color: { r: 255, g: 255, b: 255, a: 1 }
+			color: { r: 232, g: 115, b: 58, a: 1 }
 		},
 		fragment: {
 			fadeSpeed: 20,
@@ -215,6 +215,114 @@ function loadDefaultSettings()
 	return normalizeSettings(json);
 }
 
+function getJSONArray(curFile)
+{
+	var json = getJSONSettings(curFile);
+	if (json && json.length) {
+		return json;
+	}
+	var localText = getLocalText(curFile);
+	if (localText !== null) {
+		try {
+			json = JSON.parse(localText);
+			if (json && json.length) {
+				return json;
+			}
+		} catch (err) {
+			return null;
+		}
+	}
+	return null;
+}
+
+function normalizePhraseList(list)
+{
+	var out = [];
+	var seen = {};
+	if (!list || !list.length) {
+		return out;
+	}
+	for (var i = 0; i < list.length; i++) {
+		var phrase = list[i];
+		if (phrase === null || typeof phrase === "undefined") {
+			continue;
+		}
+		phrase = phrase.toString().replace(/\s+/g, " ").trim();
+		if (!phrase || seen[phrase]) {
+			continue;
+		}
+		seen[phrase] = true;
+		out.push(phrase);
+	}
+	return out;
+}
+
+function shuffleArrayInPlace(arr)
+{
+	for (var i = arr.length - 1; i > 0; i--) {
+		var j = Math.floor(Math.random() * (i + 1));
+		var tmp = arr[i];
+		arr[i] = arr[j];
+		arr[j] = tmp;
+	}
+}
+
+function rebuildCrimesPhraseOrder()
+{
+	crimesPhraseOrder = [];
+	for (var i = 0; i < crimesPhrases.length; i++) {
+		crimesPhraseOrder.push(i);
+	}
+	shuffleArrayInPlace(crimesPhraseOrder);
+	if (crimesPhraseOrder.length > 1 && crimesLastPhrase) {
+		var firstPhrase = crimesPhrases[crimesPhraseOrder[0]];
+		if (firstPhrase === crimesLastPhrase) {
+			var swapIndex = 1 + Math.floor(Math.random() * (crimesPhraseOrder.length - 1));
+			var tmp = crimesPhraseOrder[0];
+			crimesPhraseOrder[0] = crimesPhraseOrder[swapIndex];
+			crimesPhraseOrder[swapIndex] = tmp;
+		}
+	}
+	crimesPhraseCursor = 0;
+}
+
+function loadCrimesPhrases()
+{
+	var phrases = normalizePhraseList(getJSONArray(crimesSourceJSON));
+	if (!phrases.length) {
+		phrases = normalizePhraseList(getStringArraySpecial(crimesSourceTXT));
+	}
+	if (!phrases.length) {
+		phrases = [DEFAULT_CRIMES_LINE];
+	}
+	crimesPhrases = phrases;
+	crimesLastPhrase = "";
+	rebuildCrimesPhraseOrder();
+}
+
+function getNextCrimesPhrase()
+{
+	if (!crimesPhrases.length) {
+		return DEFAULT_CRIMES_LINE;
+	}
+	if (crimesPhraseCursor >= crimesPhraseOrder.length) {
+		rebuildCrimesPhraseOrder();
+	}
+	var phrase = crimesPhrases[crimesPhraseOrder[crimesPhraseCursor]];
+	crimesPhraseCursor += 1;
+	crimesLastPhrase = phrase;
+	return phrase;
+}
+
+function setCrimesLineText(text)
+{
+	var el = document.getElementById("crimesLine");
+	if (!el) {
+		return;
+	}
+	el.textContent = text || DEFAULT_CRIMES_LINE;
+}
+
 function applyValArray(nextVal)
 {
 	val = nextVal;
@@ -333,7 +441,7 @@ var laserFont = val[8];
 //5-50
 var laserSize = val[9];
 var laserStyle=laserSize+" "+laserFont;
-var	lasers = [];
+var lasers = [];
 
 /*var laserH = 290;
 var laserS = 100;
@@ -398,22 +506,33 @@ var laserTxt = [];
 var fragmentTxt = [];
 
 var maxEnIndex;
+var enemySource = "Jasons_Relative_Stamina_files/ABDBody.txt";
 var maxLaIndex;
 var maxFaIndex;
 
 var curEnIndex = 0;
 var curLaIndex = 0;
 var curFaIndex = 0;
-
-var enemySource = "Jasons_Relative_Stamina_files/ABDBody.txt";
+var laserSpawnCount = 0;
+var currentAmendmentLabel = "Amendment I";
 var laserSource = "Jasons_Relative_Stamina_files/ABDQuotes.txt";
 var fragmentSource ="Jasons_Relative_Stamina_files/ABDReferences.txt";
 
+var DEFAULT_CRIMES_LINE = "Another Pedophile Set Free";
+var crimesSourceJSON = "trump/institutional_corruption_phrases.json";
+var crimesSourceTXT = "trump/institutional_corruption_phrases.txt";
+var crimesPhrases = [];
+var gamePaused = false;
+var mouseCurDown = false;
+var crimesPhraseOrder = [];
+var crimesPhraseCursor = 0;
+var crimesLastPhrase = "";
+var crimesLineVisible = false;
+var crimesLineOpacity = 1;
+var crimesLineFadePerTick = 0.005;
+
 var valueString = "empty";
 
-var gamePaused = false;
-
-var mouseCurDown = false;
 window.onload = function() {
   init();  //example function call.
 }
@@ -431,10 +550,14 @@ canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
 
   setInterval(gameLoop, 25);
   
-  enemyTxt = getStringArray(enemySource);
+    loadCrimesPhrases();
+
+enemyTxt = getStringArray(enemySource);
   maxEnIndex = enemyTxt.length-1;
   laserTxt = getStringArray(laserSource);
   maxLaIndex = laserTxt.length-1;
+  initializeCurrentAmendment();
+  resetCrimesLine();
   fragmentTxt = getStringArray(fragmentSource);
   maxFaIndex = fragmentTxt.length-1;
   
@@ -539,6 +662,132 @@ setTimeout(spawnEnemy, enemyInterval);
 
 
 var notBeingSprayed = true;
+var laserOriginMode = "s";
+
+function getLaserOriginX()
+{
+	if (laserOriginMode === "a") {
+		return canvas.width * 0.125;
+	}
+	if (laserOriginMode === "d") {
+		return canvas.width * 0.875;
+	}
+	return canvas.width * 0.5;
+}
+
+function normalizeTokenForAmendment(token)
+{
+	if (!token) {
+		return "";
+	}
+	return token.toString().replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+/g, "");
+}
+
+function isRomanNumeralToken(token)
+{
+	return /^[IVXLCDM]+$/i.test(token);
+}
+
+function extractAmendmentLabel(textLine, prevToken, nextToken)
+{
+	if (!textLine) {
+		return null;
+	}
+
+	var match = textLine.match(/^\s*(Amendment\s+[IVXLCDM]+)/i);
+	if (match) {
+		return match[1].replace(/\s+/g, " ").trim();
+	}
+
+	var current = normalizeTokenForAmendment(textLine);
+	var prev = normalizeTokenForAmendment(prevToken);
+	var next = normalizeTokenForAmendment(nextToken);
+
+	if (/^amendment$/i.test(current) && isRomanNumeralToken(next)) {
+		return "Amendment " + next.toUpperCase();
+	}
+
+	if (/^amendment$/i.test(prev) && isRomanNumeralToken(current)) {
+		return "Amendment " + current.toUpperCase();
+	}
+
+	return null;
+}
+
+function updateCurrentAmendmentDisplay()
+{
+	var el = document.getElementById("currentAmendment");
+	if (!el) {
+		return;
+	}
+	el.textContent = currentAmendmentLabel;
+}
+function showCrimesLine()
+{
+	var el = document.getElementById("crimesLine");
+	if (!el) {
+		return;
+	}
+	setCrimesLineText(getNextCrimesPhrase());
+	crimesLineVisible = true;
+	crimesLineOpacity = 1;
+	el.style.display = "block";
+	el.style.opacity = "1";
+}
+
+function resetCrimesLine()
+{
+	crimesLineVisible = false;
+	crimesLineOpacity = 1;
+	var el = document.getElementById("crimesLine");
+	if (!el) {
+		return;
+	}
+	el.style.opacity = "1";
+	el.style.display = "none";
+}
+
+function updateCrimesLineFade()
+{
+	if (!crimesLineVisible) {
+		return;
+	}
+	var el = document.getElementById("crimesLine");
+	if (!el) {
+		return;
+	}
+	crimesLineOpacity -= crimesLineFadePerTick;
+	if (crimesLineOpacity < 0) {
+		crimesLineOpacity = 0;
+	}
+	el.style.opacity = crimesLineOpacity.toFixed(3);
+}
+function initializeCurrentAmendment()
+{
+	for (var i = 0; i < laserTxt.length; i++) {
+		var label = extractAmendmentLabel(laserTxt[i], laserTxt[i - 1], laserTxt[i + 1]);
+		if (label) {
+			currentAmendmentLabel = label;
+			break;
+		}
+	}
+	updateCurrentAmendmentDisplay();
+}
+
+function getRandomEnemyTargetX()
+{
+	var lanes = [canvas.width * 0.125, canvas.width * 0.5, canvas.width * 0.875];
+	var lane = lanes[Math.floor(Math.random() * lanes.length)];
+	var jitter = (Math.random() - 0.5) * (canvas.width * 0.088);
+	var target = lane + jitter;
+	if (target < 0) {
+		target = 0;
+	}
+	if (target > canvas.width) {
+		target = canvas.width;
+	}
+	return target;
+}
 
 function gameLoop() {
 	
@@ -553,7 +802,7 @@ function gameLoop() {
 	}
 	height = canvas.height;
 	originY = canvas.height+20;
-	originX = canvas.width/2;
+	originX = getLaserOriginX();
 			//document.getElementById("fLig").innerHTML=" "+fragmentVal;
 
   clearCanvas();
@@ -562,6 +811,7 @@ function gameLoop() {
   moveLaser();
   moveEnemy();
   moveFragments();
+  updateCrimesLineFade();
   }
   drawLaser();
   drawEnemy();
@@ -613,9 +863,11 @@ notBeingSprayed = true;
 //get mouse position
 function getMousePos(evt) {
 var rect = canvas.getBoundingClientRect();
+var scaleX = canvas.width / rect.width;
+var scaleY = canvas.height / rect.height;
 return {
-  x: evt.clientX - rect.left,
-  y: evt.clientY - rect.top
+  x: (evt.clientX - rect.left) * scaleX,
+  y: (evt.clientY - rect.top) * scaleY
 };
 }
 
@@ -905,8 +1157,10 @@ function spawnLaser()
 
   if(lasers.length < laserDensity)
   {
+	laserSpawnCount += 1;
+	var launchX = getLaserOriginX();
 	//get vector of direction towards mouse
-	var vectorX = mousePos.x - originX;
+	var vectorX = mousePos.x - launchX;
 	var vectorY = mousePos.y - originY;
 
 	//normalise vector before storing its value
@@ -916,6 +1170,11 @@ function spawnLaser()
 
 	//get the word for that vector
 	var laserWord = laserTxt [curLaIndex];
+	var amendmentLabel = extractAmendmentLabel(laserWord, laserTxt[curLaIndex - 1], laserTxt[curLaIndex + 1]);
+	if (amendmentLabel) {
+		currentAmendmentLabel = amendmentLabel;
+		updateCurrentAmendmentDisplay();
+	}
 	curLaIndex ++;
 	
 	//loop word array	
@@ -932,11 +1191,22 @@ function spawnLaser()
 	divGuide.style.font = laserStyle;
 	var wordWidth = (divGuide.clientWidth + 1);
 	var wordHeight = (divGuide.clientHeight +1 );
+
+	// Color cadence:
+	// every 10th laser -> blue
+	// every 5th (non-10th) -> red
+	// otherwise -> default laser color
+	var laserColorForShot = laserColor;
+	if (laserSpawnCount % 10 === 0) {
+		laserColorForShot = "rgba(0,102,255,1)";
+	} else if (laserSpawnCount % 5 === 0) {
+		laserColorForShot = "rgba(255,0,0,1)";
+	}
 	
 	//add laser to laser array
 	/////////////origin coords, vector coords, speed, word
-	//Lasers [0]originX[1]originY[2]vectorX[3]vectorY[4]speed[5]word[6]width[7]height[8]angle
-	lasers.push([originX, originY, vectorX,vectorY, laserSpeed, laserWord, wordWidth, wordHeight/2,0]);
+	//Lasers [0]originX[1]originY[2]vectorX[3]vectorY[4]speed[5]word[6]width[7]height[8]angle[9]color
+	lasers.push([launchX, originY, vectorX,vectorY, laserSpeed, laserWord, wordWidth, wordHeight/2,0,laserColorForShot]);
 	  }
 }
 
@@ -952,6 +1222,7 @@ function moveLaser() {
 	//[6]width
 	//[7]height
 	//[8]angle
+	//[9]color
     for (var i = 0; i < lasers.length; i++) 
   { 
 	var isDead = false;
@@ -1000,7 +1271,7 @@ function drawLaser() {
 		
 		//var laserStyle=laserSize+" "+laserFont;
 		ctx.font = laserStyle;
-		ctx.fillStyle = laserColor;
+		ctx.fillStyle = lasers[i][9] || laserColor;
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		
@@ -1043,8 +1314,20 @@ if(enemies.length<enemyTotal)
 	
 	//get a random x start position inside the screen
 	var startX =Math.floor((Math.random()*canvas.width));
-	//get random speed between 2 and 12
+	// Missile-like movement: mostly straight descent with slight ballistic curve.
 	var speed = Math.floor((Math.random()*enemySpeedVar)+enemySpeedBase); 
+	var targetX = getRandomEnemyTargetX();
+	var targetY = canvas.height + 50;
+	var dx = targetX - startX;
+	var dy = targetY + 50;
+	var dMag = Math.sqrt(dx*dx + dy*dy);
+	if (dMag < 1) {
+		dMag = 1;
+	}
+	var vx = (dx / dMag) * speed * 1.15;
+	var vy = Math.abs((dy / dMag) * speed * 1.15);
+	var ax = (targetX - startX) / canvas.width * 0.004;
+	var ay = (0.012 + speed * 0.0015) * 1.15;
 	
 	//get bounding box by putting word in invisible div and measuring it
 	document.getElementById("Test").innerHTML=enemyWord;
@@ -1057,8 +1340,9 @@ if(enemies.length<enemyTotal)
 	{
 	speed = 1;
 	}
-	//enemies [0]originX [1]originY [2]speed [3]word [4]width [5]height
-	enemies.push([startX,-50, speed, enemyWord, wordWidth, wordHeight/2]);
+	// enemies:
+	// [0]x [1]y [2]speed [3]word [4]width [5]height [6]vx [7]vy [8]ax [9]ay [10]targetX
+	enemies.push([startX,-50, speed, enemyWord, wordWidth, wordHeight/2, vx, vy, ax, ay, targetX, false]);
 
 	//prints in firebug
 	//console.log("add enemy", enemyWord, enemies.length);
@@ -1070,17 +1354,35 @@ setTimeout(spawnEnemy, enemyInterval);
 function moveEnemy()
 {
 
-	//enemies [0]originX [1]originY [2]speed [3]word [4]width [5]height
+	// enemies:
+	// [0]x [1]y [2]speed [3]word [4]width [5]height [6]vx [7]vy [8]ax [9]ay [10]targetX
 	if (enemies.length)
     for (var i = 0; i < enemies.length; i++) 
 	{
-	 if(enemies[i][1] < canvas.height+200)
-	 {
-		enemies[i][1]+= enemies [i][2];
-	 }else
-	 {
-		enemies.splice(i,1);
-	 }
+		// Backward-compatible fallback for any legacy enemy entries.
+		if (typeof enemies[i][6] === "undefined") {
+			enemies[i][6] = 0;
+			enemies[i][7] = enemies[i][2];
+			enemies[i][8] = 0;
+			enemies[i][9] = 0.015;
+			enemies[i][11] = false;
+		}
+
+		enemies[i][6] += enemies[i][8];
+		enemies[i][7] += enemies[i][9];
+		enemies[i][0] += enemies[i][6];
+		enemies[i][1] += enemies[i][7];
+
+		if (!enemies[i][11] && enemies[i][1] >= canvas.height)
+		{
+			showCrimesLine();
+			enemies[i][11] = true;
+		}
+
+		if (enemies[i][1] > canvas.height + 250 || enemies[i][0] < -250 || enemies[i][0] > canvas.width + 250)
+		{
+			enemies.splice(i,1);
+		}
 	
 	}
 //console.log("move enemy");
@@ -1100,6 +1402,50 @@ function drawEnemy()
 		ctx.fillRect(0,0-enemies[i][5],enemies[i][4],enemies[i][5]);*/
 
 		ctx.font = enemyStyle;
+		var shadowR = eHSLA[0];
+		var shadowG = eHSLA[1];
+		var shadowB = eHSLA[2];
+		var shadowTrail = 8;
+		var vx = enemies[i][6] || 0;
+		var vy = enemies[i][7] || enemies[i][2] || 1;
+		var vMag = Math.sqrt(vx*vx + vy*vy);
+		if (vMag < 0.001) {
+			vMag = 1;
+		}
+		var tx = -vx / vMag;
+		var ty = -vy / vMag;
+		var flickerBase = (Date.now() * 0.02) + (i * 1.7);
+		ctx.fillStyle =enemyColor;
+		
+		// Draw subtle trailing copies opposite motion direction (motion-blur style).
+		for (var t = shadowTrail; t >= 1; t--) {
+			var alpha = 0.08 * (shadowTrail - t + 1);
+			var flicker = 0.82 + 0.28 * Math.sin(flickerBase + t * 0.9);
+			alpha *= flicker;
+			if (alpha < 0.02) {
+				alpha = 0.02;
+			}
+			var trailX = tx * t * 5;
+			var trailY = ty * t * 5;
+			ctx.fillStyle ="rgba("+shadowR+","+shadowG+","+shadowB+","+alpha+")";
+			if(enemyVertical)
+			{
+				var tempShadowWord = enemies[i][3].split("");
+				var tempShadowX = trailX;
+				var tempShadowY = trailY;
+				
+				for (var cs=0; cs<tempShadowWord.length; cs++)
+				{
+					ctx.fillText(tempShadowWord[cs], tempShadowX, tempShadowY);
+					tempShadowY += enemyCspace;
+				}
+			}
+			else
+			{
+				ctx.fillText(enemies[i][3], trailX, trailY);
+			}
+		}
+		
 		ctx.fillStyle =enemyColor;
 		
 		
@@ -1134,8 +1480,8 @@ function keyDown(e) {
           //e.preventDefault();
       var evtobj = window.event? event : e
 	  
-	  //ctrl+i
-	  if (evtobj.keyCode == 32 && evtobj.ctrlKey && !interfacePressed)
+	  //option+h
+	  if (evtobj.keyCode == 72 && evtobj.altKey && !interfacePressed)
 	  {
 				//console.log("IN");
 			if(interfaceVisible)
@@ -1209,6 +1555,16 @@ function keyDown(e) {
 		}
 			
 		break;
+	  //a/s/d select laser launch origin (left / center / right)
+		case 65: //a
+			laserOriginMode = "a";
+		break;
+		case 83: //s
+			laserOriginMode = "s";
+		break;
+		case 68: //d
+			laserOriginMode = "d";
+		break;
 	  }
 	  updateValText();
 	  //CRTL+I hide content div
@@ -1222,8 +1578,8 @@ function keyUp(e) {
 		laserVPressed = false;
 	}
 
-  //ctrl+i
-  if (e.keyCode == 32)
+  //release option+h latch
+  if (e.keyCode == 72)
   {
   
 	  interfacePressed = false;
