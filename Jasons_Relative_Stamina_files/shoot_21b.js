@@ -524,6 +524,7 @@ var crimesSourceTXT = "politician/institutional_corruption_phrases.txt";
 var crimesPhrases = [];
 var gamePaused = false;
 var mouseCurDown = false;
+var mouseOnCanvas = false;
 var crimesPhraseOrder = [];
 var crimesPhraseCursor = 0;
 var crimesLastPhrase = "";
@@ -572,7 +573,12 @@ enemyTxt = getStringArray(enemySource);
   document.addEventListener('keydown', keyDown, false);
   document.addEventListener('keyup', keyUp, false);
 //mouse moving- update position
-canvas.addEventListener('mousemove', function(evt) {mousePos = getMousePos( evt);}, false); 
+canvas.addEventListener('mousemove', function(evt) {
+	mousePos = getMousePos(evt);
+	mouseOnCanvas = true;
+}, false);
+canvas.addEventListener('mouseenter', mouseEnteredCanvas, false);
+canvas.addEventListener('mouseleave', mouseLeftCanvas, false);
 canvas.addEventListener('mousedown', mouseIsDown, false); 
 canvas.addEventListener('mouseup', mouseIsUp, false); 
 
@@ -834,6 +840,7 @@ function sprayLaser ()
 function mouseIsDown(evt) {
 mouseCurDown = true;
 mousePos = getMousePos(evt);
+mouseOnCanvas = true;
 
 if(gamePaused)
 {
@@ -859,6 +866,20 @@ function mouseIsUp() {
 mouseCurDown = false;
 notBeingSprayed = true;
 ////console.log(mouseCurDown);
+}
+
+function mouseEnteredCanvas(evt) {
+	mouseOnCanvas = true;
+	if (evt) {
+		mousePos = getMousePos(evt);
+	}
+}
+
+function mouseLeftCanvas() {
+	mouseOnCanvas = false;
+	// Stop continuous fire immediately once the pointer leaves the canvas.
+	mouseCurDown = false;
+	notBeingSprayed = true;
 }
 //get mouse position
 function getMousePos(evt) {
@@ -1154,6 +1175,9 @@ function drawFragments()
 }
 function spawnLaser()
 {
+  if (!mouseOnCanvas || !mousePos) {
+	return;
+  }
 
   if(lasers.length < laserDensity)
   {
@@ -1165,6 +1189,9 @@ function spawnLaser()
 
 	//normalise vector before storing its value
 	var vMag = Math.sqrt(vectorX*vectorX + vectorY*vectorY);
+	if (!vMag) {
+		return;
+	}
 	vectorX /= vMag;
 	vectorY /= vMag;
 
@@ -1614,13 +1641,13 @@ function getStringArray(curFile)
 	var request = getHTTPObject();
 	var wordArray = [];
 	if (request) {
-		request.onreadystatechange = function() {
-			wordArray =request.responseText.split(/[\s ]+/);
-		};
 		try {
 			request.open("GET", curFile, false);
 			request.send(null);
-			if (request.status >= 200 && request.status < 300 && wordArray.length > 0) {
+			if (request.status >= 200 && request.status < 300 && request.responseText) {
+				wordArray = request.responseText.split(/[\s ]+/);
+			}
+			if (wordArray.length > 0) {
 				return wordArray;
 			}
 		} catch (err) {
@@ -1642,13 +1669,13 @@ function getStringArraySpecial(curFile)
 	var request = getHTTPObject();
 	var wordArray = [];
 	if (request) {
-		request.onreadystatechange = function() {
-			wordArray =request.responseText.split(/[\n\r]+/);
-		};
 		try {
 			request.open("GET", curFile, false);
 			request.send(null);
-			if (request.status >= 200 && request.status < 300 && wordArray.length > 0) {
+			if (request.status >= 200 && request.status < 300 && request.responseText) {
+				wordArray = request.responseText.split(/[\n\r]+/);
+			}
+			if (wordArray.length > 0) {
 				return wordArray;
 			}
 		} catch (err) {
