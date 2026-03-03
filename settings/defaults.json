@@ -10,7 +10,7 @@
     "speed": 20,
     "spacing": 27,
     "font": "Open Sans",
-    "size": "14pt",
+    "size": "28pt",
     "color": {
       "r": 255,
       "g": 255,
@@ -28,7 +28,7 @@
     "speedVariation": 12,
     "spacing": 20,
     "font": "Arvo",
-    "size": "20pt",
+    "size": "28pt",
     "color": {
       "r": 232,
       "g": 115,

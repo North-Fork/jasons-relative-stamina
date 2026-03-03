@@ -20,7 +20,7 @@ function getBuiltInDefaultSettings()
 			speed: 20,
 			spacing: 27,
 			font: "Open Sans",
-			size: "14pt",
+			size: "28pt",
 			color: { r: 255, g: 255, b: 255, a: 1 },
 			interval: 50,
 			spray: true
@@ -33,7 +33,7 @@ function getBuiltInDefaultSettings()
 			speedVariation: 12,
 			spacing: 20,
 			font: "Arvo",
-			size: "20pt",
+			size: "28pt",
 			color: { r: 232, g: 115, b: 58, a: 1 }
 		},
 		fragment: {
