@@ -519,8 +519,8 @@ var laserSource = "Jasons_Relative_Stamina_files/ABDQuotes.txt";
 var fragmentSource ="Jasons_Relative_Stamina_files/ABDReferences.txt";
 
 var DEFAULT_CRIMES_LINE = "Another Pedophile Set Free";
-var crimesSourceJSON = "trump/institutional_corruption_phrases.json";
-var crimesSourceTXT = "trump/institutional_corruption_phrases.txt";
+var crimesSourceJSON = "politician/institutional_corruption_phrases.json";
+var crimesSourceTXT = "politician/institutional_corruption_phrases.txt";
 var crimesPhrases = [];
 var gamePaused = false;
 var mouseCurDown = false;
