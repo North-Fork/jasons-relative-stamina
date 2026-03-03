@@ -506,7 +506,7 @@ var laserTxt = [];
 var fragmentTxt = [];
 
 var maxEnIndex;
-var enemySource = "Jasons_Relative_Stamina_files/ABDBody.txt";
+var enemySource = "data/ABDBody.txt";
 var maxLaIndex;
 var maxFaIndex;
 
@@ -517,8 +517,8 @@ var laserSpawnCount = 0;
 var currentAmendmentLabel = "Amendment I";
 var currentAmendmentSentence = "";
 var amendmentFirstSentenceByLabel = {};
-var laserSource = "Jasons_Relative_Stamina_files/ABDQuotes.txt";
-var fragmentSource ="Jasons_Relative_Stamina_files/ABDReferences.txt";
+var laserSource = "data/ABDQuotes.txt";
+var fragmentSource ="data/ABDReferences.txt";
 
 var DEFAULT_CRIMES_LINE = "Another Pedophile Set Free";
 var crimesSourceJSON = "politician/institutional_corruption_phrases.json";
@@ -550,6 +550,9 @@ function init() {
   canvas = document.getElementById('canvas');
 canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
   ctx = canvas.getContext('2d');
+  setInterfaceVisibility(interfaceVisible);
+  updateCanvasSizeForViewport();
+  window.addEventListener('resize', updateCanvasSizeForViewport, false);
 
   setInterval(gameLoop, 25);
   
@@ -817,8 +820,9 @@ function resetCrimesLine()
 	if (!el) {
 		return;
 	}
+	setCrimesLineText(DEFAULT_CRIMES_LINE);
 	el.style.opacity = "1";
-	el.style.display = "none";
+	el.style.display = "block";
 }
 
 function updateCrimesLineFade()
@@ -865,20 +869,8 @@ function getRandomEnemyTargetX()
 }
 
 function gameLoop() {
-	
-	if(window.innerHeight >600)
-	{
-	canvas.height = window.innerHeight-150;
-	
-	}else
-	{
-	
-	canvas.height = 400;
-	}
-	height = canvas.height;
-	originY = canvas.height+20;
-	originX = getLaserOriginX();
-			//document.getElementById("fLig").innerHTML=" "+fragmentVal;
+	updateCanvasSizeForViewport();
+				//document.getElementById("fLig").innerHTML=" "+fragmentVal;
 
   clearCanvas();
   if(!gamePaused)
@@ -1572,27 +1564,83 @@ var laserVPressed = false;
 var interfacePressed = false;
 
 var interfaceVisible = true;
+function setInterfaceVisibility(visible)
+{
+	var container = document.getElementById('container');
+	interfaceVisible = !!visible;
+	if (container) {
+		container.style.display = interfaceVisible ? "block" : "none";
+	}
+	if (document.body) {
+		document.body.classList.toggle("panel-hidden", !interfaceVisible);
+	}
+}
+
+function updateCanvasWidthForLayout()
+{
+	if (!canvas) {
+		return;
+	}
+	var compactLayout = window.innerWidth <= 900;
+	var reserved = compactLayout ? 24 : (interfaceVisible ? 305 : 24);
+	var target = Math.floor(window.innerWidth - reserved);
+	if (target < 320) {
+		target = 320;
+	}
+	canvas.width = target;
+	width = canvas.width;
+}
+
+function getElementOuterHeight(id)
+{
+	var el = document.getElementById(id);
+	if (!el) {
+		return 0;
+	}
+	var style = window.getComputedStyle(el);
+	if (style.display === "none" || style.visibility === "hidden") {
+		return 0;
+	}
+	var mt = parseFloat(style.marginTop) || 0;
+	var mb = parseFloat(style.marginBottom) || 0;
+	return el.offsetHeight + mt + mb;
+}
+
+function updateCanvasSizeForViewport()
+{
+	if (!canvas) {
+		return;
+	}
+	updateCanvasWidthForLayout();
+
+	// Keep title/canvas/amendment/crime text visible on startup.
+	var reserved = 24
+		+ getElementOuterHeight("header")
+		+ getElementOuterHeight("currentAmendment")
+		+ getElementOuterHeight("amendmentSentence")
+		+ getElementOuterHeight("crimesLine")
+		+ 18;
+	var target = Math.floor(window.innerHeight - reserved);
+	if (target < 260) {
+		target = 260;
+	}
+	canvas.height = target;
+	height = canvas.height;
+	originY = canvas.height + 20;
+	originX = getLaserOriginX();
+}
+
 function keyDown(e) {
           //e.preventDefault();
       var evtobj = window.event? event : e
 	  
 	  //option+h
-	  if (evtobj.keyCode == 72 && evtobj.altKey && !interfacePressed)
-	  {
-				//console.log("IN");
-			if(interfaceVisible)
-			{
-				document.getElementById('container').style.display = "none";
-				interfaceVisible = false;
-				//console.log("OFF");
-			}else
-			{
-				document.getElementById('container').style.display = "block";
-				interfaceVisible = true;
-				//console.log("ON");
-			}
-	  interfacePressed=true;
-	  }
+		  if (evtobj.keyCode == 72 && evtobj.altKey && !interfacePressed)
+		  {
+				setInterfaceVisibility(!interfaceVisible);
+				updateCanvasSizeForViewport();
+		  interfacePressed=true;
+		  }
 
 	  switch(evtobj.keyCode)
 	  {

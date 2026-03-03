@@ -27,8 +27,8 @@ Replace the current enemy text source pipeline (currently based on `projects.the
 1. Pull Duke data from API/CSV endpoint (TBD URL).
 2. Apply filters above.
 3. Transform selected claims to line-based plain text.
-4. Write to `Jasons_Relative_Stamina_files/ABDBody.txt`.
-5. Sync local fallback in `Jasons_Relative_Stamina_files/stamina_local_data.js`.
+4. Write to `data/ABDBody.txt`.
+5. Sync local fallback in `data/stamina_local_data.js`.
 
 ### Open Items
 - Confirm Duke endpoint/export URL.
