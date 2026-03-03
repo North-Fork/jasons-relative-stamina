@@ -134,6 +134,14 @@ canvas {
 	min-height: 1.2em;
 }
 
+#amendmentSentence {
+	margin: 0 0 12px;
+	font: 600 15px/1.35 "Source Sans Pro", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	text-align: center;
+	color: rgba(255, 255, 255, 0.92);
+	min-height: 1.35em;
+}
+
 #crimesLine {
 	margin: 0 0 18px;
 	display: none;
@@ -376,6 +384,12 @@ input[type="range"]::-moz-range-thumb {
 	#currentAmendment {
 		width: calc(100vw - 32px);
 		margin: 10px auto 10px auto;
+	}
+
+	#amendmentSentence {
+		width: calc(100vw - 32px);
+		margin: 0 auto 10px auto;
+		font-size: 1rem;
 	}
 
 	#crimesLine {

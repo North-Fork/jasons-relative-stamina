@@ -515,6 +515,8 @@ var curLaIndex = 0;
 var curFaIndex = 0;
 var laserSpawnCount = 0;
 var currentAmendmentLabel = "Amendment I";
+var currentAmendmentSentence = "";
+var amendmentFirstSentenceByLabel = {};
 var laserSource = "Jasons_Relative_Stamina_files/ABDQuotes.txt";
 var fragmentSource ="Jasons_Relative_Stamina_files/ABDReferences.txt";
 
@@ -722,11 +724,77 @@ function extractAmendmentLabel(textLine, prevToken, nextToken)
 
 function updateCurrentAmendmentDisplay()
 {
-	var el = document.getElementById("currentAmendment");
-	if (!el) {
-		return;
+	var labelEl = document.getElementById("currentAmendment");
+	if (labelEl) {
+		labelEl.textContent = currentAmendmentLabel;
 	}
-	el.textContent = currentAmendmentLabel;
+	currentAmendmentSentence = amendmentFirstSentenceByLabel[currentAmendmentLabel] || "";
+	var sentenceEl = document.getElementById("amendmentSentence");
+	if (sentenceEl) {
+		sentenceEl.textContent = currentAmendmentSentence;
+	}
+}
+
+function appendSentenceToken(curSentence, token)
+{
+	if (!token && token !== 0) {
+		return curSentence;
+	}
+	var t = token.toString().trim();
+	if (!t) {
+		return curSentence;
+	}
+	if (!curSentence) {
+		return t;
+	}
+	if (/^[,.;:!?)\]]/.test(t)) {
+		return curSentence + t;
+	}
+	return curSentence + " " + t;
+}
+
+function extractFirstSentenceFromWordIndex(startIndex)
+{
+	var sentence = "";
+	for (var i = startIndex; i < laserTxt.length; i++) {
+		var raw = laserTxt[i];
+		var norm = normalizeTokenForAmendment(raw);
+		var nextNorm = normalizeTokenForAmendment(laserTxt[i + 1]);
+
+		if (sentence && /^amendment$/i.test(norm) && isRomanNumeralToken(nextNorm)) {
+			break;
+		}
+
+		if (!sentence) {
+			if (/^section$/i.test(norm) || /^\d+$/.test(norm)) {
+				continue;
+			}
+			if (/^[,.;:!?()\[\]]+$/.test((raw || "").toString().trim())) {
+				continue;
+			}
+		}
+
+		sentence = appendSentenceToken(sentence, raw);
+		if (/[.!?]["')\]]*$/.test((raw || "").toString().trim())) {
+			break;
+		}
+	}
+	return sentence.replace(/\s+/g, " ").trim();
+}
+
+function buildAmendmentSentenceMap()
+{
+	amendmentFirstSentenceByLabel = {};
+	for (var i = 0; i < laserTxt.length - 1; i++) {
+		var current = normalizeTokenForAmendment(laserTxt[i]);
+		var next = normalizeTokenForAmendment(laserTxt[i + 1]);
+		if (/^amendment$/i.test(current) && isRomanNumeralToken(next)) {
+			var label = "Amendment " + next.toUpperCase();
+			if (!amendmentFirstSentenceByLabel[label]) {
+				amendmentFirstSentenceByLabel[label] = extractFirstSentenceFromWordIndex(i + 2);
+			}
+		}
+	}
 }
 function showCrimesLine()
 {
@@ -770,6 +838,7 @@ function updateCrimesLineFade()
 }
 function initializeCurrentAmendment()
 {
+	buildAmendmentSentenceMap();
 	for (var i = 0; i < laserTxt.length; i++) {
 		var label = extractAmendmentLabel(laserTxt[i], laserTxt[i - 1], laserTxt[i + 1]);
 		if (label) {
