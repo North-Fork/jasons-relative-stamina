@@ -145,7 +145,7 @@ body.panel-hidden #header {
 	font: 700 15px/1.2 "Aldrich", "Segoe UI", sans-serif;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
-	text-align: right;
+	text-align: center;
 	color: #ffffff;
 	min-height: 1.2em;
 }
@@ -160,7 +160,7 @@ body.panel-hidden #currentAmendment {
 	width: min(1000px, calc(100vw - 305px));
 	margin: 0 auto 12px 0;
 	font: 600 15px/1.35 "Source Sans Pro", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-	text-align: right;
+	text-align: center;
 	color: rgba(255, 255, 255, 0.92);
 	min-height: 1.35em;
 }
@@ -178,7 +178,7 @@ body.panel-hidden #amendmentSentence {
 	font: 700 30px/1.2 "Aldrich", "Segoe UI", sans-serif;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
-	text-align: right;
+	text-align: center;
 	color: #ffffff;
 	min-height: 1.2em;
 }

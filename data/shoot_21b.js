@@ -803,23 +803,48 @@ function buildAmendmentSentenceMap()
 	}
 }
 
-function getRandomAmendmentLabel(excludeLabel)
+function getAmendmentLabelIndex(label)
+{
+	for (var i = 0; i < amendmentLabels.length; i++) {
+		if (amendmentLabels[i] === label) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+function getRandomAmendmentLabel()
 {
 	if (!amendmentLabels.length) {
-		return excludeLabel || "Amendment I";
+		return currentAmendmentLabel || "Amendment I";
 	}
+
 	if (amendmentLabels.length === 1) {
 		return amendmentLabels[0];
 	}
-	var pick = amendmentLabels[Math.floor(Math.random() * amendmentLabels.length)];
-	if (excludeLabel && pick === excludeLabel) {
-		var tries = 6;
-		while (pick === excludeLabel && tries > 0) {
-			pick = amendmentLabels[Math.floor(Math.random() * amendmentLabels.length)];
-			tries -= 1;
+
+	var currentIndex = getAmendmentLabelIndex(currentAmendmentLabel);
+	var nextSequentialIndex = (currentIndex >= 0) ? ((currentIndex + 1) % amendmentLabels.length) : -1;
+	var candidates = [];
+	for (var i = 0; i < amendmentLabels.length; i++) {
+		if (amendmentLabels[i] === currentAmendmentLabel) {
+			continue;
+		}
+		if (i === nextSequentialIndex) {
+			continue;
+		}
+		candidates.push(amendmentLabels[i]);
+	}
+
+	if (!candidates.length) {
+		for (var j = 0; j < amendmentLabels.length; j++) {
+			if (amendmentLabels[j] !== currentAmendmentLabel) {
+				candidates.push(amendmentLabels[j]);
+			}
 		}
 	}
-	return pick;
+
+	return candidates[Math.floor(Math.random() * candidates.length)];
 }
 function showCrimesLine()
 {
@@ -865,7 +890,7 @@ function updateCrimesLineFade()
 function initializeCurrentAmendment()
 {
 	buildAmendmentSentenceMap();
-	currentAmendmentLabel = getRandomAmendmentLabel(currentAmendmentLabel);
+	currentAmendmentLabel = getRandomAmendmentLabel();
 	updateCurrentAmendmentDisplay();
 }
 
@@ -1275,8 +1300,9 @@ function spawnLaser()
 	//get the word for that vector
 	var laserWord = laserTxt [curLaIndex];
 	var amendmentLabel = extractAmendmentLabel(laserWord, laserTxt[curLaIndex - 1], laserTxt[curLaIndex + 1]);
-	if (amendmentLabel) {
-		currentAmendmentLabel = getRandomAmendmentLabel(currentAmendmentLabel);
+	var isAmendmentHeadingToken = /^amendment$/i.test(normalizeTokenForAmendment(laserWord));
+	if (amendmentLabels.length && amendmentLabel && isAmendmentHeadingToken) {
+		currentAmendmentLabel = getRandomAmendmentLabel();
 		updateCurrentAmendmentDisplay();
 	}
 	curLaIndex ++;
