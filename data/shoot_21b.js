@@ -591,6 +591,10 @@ canvas.addEventListener('mouseenter', mouseEnteredCanvas, false);
 canvas.addEventListener('mouseleave', mouseLeftCanvas, false);
 canvas.addEventListener('mousedown', mouseIsDown, false); 
 canvas.addEventListener('mouseup', mouseIsUp, false); 
+canvas.addEventListener('touchstart', touchIsDown, { passive: false });
+canvas.addEventListener('touchmove', touchMove, { passive: false });
+canvas.addEventListener('touchend', touchIsUp, { passive: false });
+canvas.addEventListener('touchcancel', touchIsUp, { passive: false });
 
 	ctx.textBaseline="middle";
 	ctx.textAlign = "center";
@@ -972,6 +976,40 @@ function mouseIsUp() {
 mouseCurDown = false;
 notBeingSprayed = true;
 ////console.log(mouseCurDown);
+}
+
+function getPrimaryTouchPoint(evt) {
+	if (evt.touches && evt.touches.length) {
+		return evt.touches[0];
+	}
+	if (evt.changedTouches && evt.changedTouches.length) {
+		return evt.changedTouches[0];
+	}
+	return null;
+}
+
+function touchIsDown(evt) {
+	evt.preventDefault();
+	var touch = getPrimaryTouchPoint(evt);
+	if (!touch) {
+		return;
+	}
+	mouseIsDown(touch);
+}
+
+function touchMove(evt) {
+	evt.preventDefault();
+	var touch = getPrimaryTouchPoint(evt);
+	if (!touch) {
+		return;
+	}
+	mousePos = getMousePos(touch);
+	mouseOnCanvas = true;
+}
+
+function touchIsUp(evt) {
+	evt.preventDefault();
+	mouseIsUp();
 }
 
 function mouseEnteredCanvas(evt) {

@@ -89,6 +89,7 @@ canvas {
 	width: min(1000px, calc(100vw - 305px));
 	height: auto;
 	margin: 0 auto 0 0;
+	touch-action: none;
 	border: 1px solid var(--canvas-frame);
 	border-radius: 10px;
 	background: #fff;
