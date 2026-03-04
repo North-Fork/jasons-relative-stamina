@@ -551,9 +551,13 @@ function init() {
   canvas = document.getElementById('canvas');
 canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
   ctx = canvas.getContext('2d');
+  applyMobileContextMode();
   setInterfaceVisibility(interfaceVisible);
   updateCanvasSizeForViewport();
-  window.addEventListener('resize', updateCanvasSizeForViewport, false);
+  window.addEventListener('resize', function () {
+	applyMobileContextMode();
+	updateCanvasSizeForViewport();
+  }, false);
 
   setInterval(gameLoop, 25);
   
@@ -1606,6 +1610,28 @@ var laserVPressed = false;
 var interfacePressed = false;
 
 var interfaceVisible = true;
+var mobileContext = false;
+
+function detectMobileContext()
+{
+	var ua = navigator.userAgent || "";
+	var uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+	var coarsePointer = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+	var touchPoints = (navigator.maxTouchPoints || 0) > 1;
+	return uaMobile || coarsePointer || touchPoints;
+}
+
+function applyMobileContextMode()
+{
+	mobileContext = detectMobileContext();
+	if (document.body) {
+		document.body.classList.toggle("mobile-context", mobileContext);
+	}
+	if (mobileContext) {
+		setInterfaceVisibility(false);
+	}
+}
+
 function setInterfaceVisibility(visible)
 {
 	var container = document.getElementById('container');
@@ -1623,7 +1649,7 @@ function updateCanvasWidthForLayout()
 	if (!canvas) {
 		return;
 	}
-	var compactLayout = window.innerWidth <= 900;
+	var compactLayout = mobileContext || window.innerWidth <= 900;
 	var reserved = compactLayout ? 24 : (interfaceVisible ? 305 : 24);
 	var target = Math.floor(window.innerWidth - reserved);
 	if (target < 320) {
@@ -1676,10 +1702,12 @@ function keyDown(e) {
           //e.preventDefault();
       var evtobj = window.event? event : e
 	  
-	  //option+h
-		  if (evtobj.keyCode == 72 && evtobj.altKey && !interfacePressed)
-		  {
-				setInterfaceVisibility(!interfaceVisible);
+		  //option+h
+			  if (evtobj.keyCode == 72 && evtobj.altKey && !interfacePressed)
+			  {
+				if (!mobileContext) {
+					setInterfaceVisibility(!interfaceVisible);
+				}
 				updateCanvasSizeForViewport();
 		  interfacePressed=true;
 		  }

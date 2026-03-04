@@ -80,6 +80,10 @@ body.panel-hidden {
 	padding-left: 0;
 }
 
+body.mobile-context {
+	padding-left: 0;
+}
+
 canvas {
 	display: block;
 	width: min(1000px, calc(100vw - 305px));
@@ -92,6 +96,11 @@ canvas {
 }
 
 body.panel-hidden canvas {
+	width: calc(100vw - 24px);
+	margin: 0 auto;
+}
+
+body.mobile-context canvas {
 	width: calc(100vw - 24px);
 	margin: 0 auto;
 }
@@ -115,6 +124,11 @@ body.panel-hidden #header {
 	width: calc(100vw - 24px);
 	margin-left: auto;
 	margin-right: auto;
+}
+
+body.mobile-context #header {
+	width: calc(100vw - 32px);
+	margin: 18px auto 10px auto;
 }
 
 #footer {
@@ -156,6 +170,11 @@ body.panel-hidden #currentAmendment {
 	margin-right: auto;
 }
 
+body.mobile-context #currentAmendment {
+	width: calc(100vw - 32px);
+	margin: 10px auto 10px auto;
+}
+
 #amendmentSentence {
 	width: min(1000px, calc(100vw - 305px));
 	margin: 0 auto 12px 0;
@@ -169,6 +188,12 @@ body.panel-hidden #amendmentSentence {
 	width: calc(100vw - 24px);
 	margin-left: auto;
 	margin-right: auto;
+}
+
+body.mobile-context #amendmentSentence {
+	width: calc(100vw - 32px);
+	margin: 0 auto 10px auto;
+	font-size: 1rem;
 }
 
 #crimesLine {
@@ -187,6 +212,12 @@ body.panel-hidden #crimesLine {
 	width: calc(100vw - 24px);
 	margin-left: auto;
 	margin-right: auto;
+}
+
+body.mobile-context #crimesLine {
+	width: calc(100vw - 32px);
+	margin: 0 auto 10px auto;
+	font-size: 1.9rem;
 }
 
 #Test {
@@ -247,6 +278,24 @@ body.panel-hidden #crimesLine {
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: #cbd5e1;
+}
+
+body.mobile-context #container {
+	position: static;
+	width: calc(100vw - 24px);
+	max-width: 680px;
+	margin: 8px auto 20px auto;
+	padding: 8px 4px;
+	border-right: 0;
+	background: rgba(15, 23, 42, 0.35);
+}
+
+body.mobile-context #container::before {
+	margin: 2px 8px 10px 8px;
+}
+
+body.mobile-context #container::after {
+	display: none;
 }
 
 .panel {
