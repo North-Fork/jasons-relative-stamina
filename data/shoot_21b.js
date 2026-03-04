@@ -513,6 +513,9 @@ var maxFaIndex;
 var curEnIndex = 0;
 var curLaIndex = 0;
 var curFaIndex = 0;
+var enemyStreamLaneIndex = 0;
+var enemySentenceLaneIndex = 0;
+var enemySentenceLaneActive = false;
 var laserSpawnCount = 0;
 var currentAmendmentLabel = "Amendment I";
 var currentAmendmentSentence = "";
@@ -558,6 +561,10 @@ canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
 	applyMobileContextMode();
 	updateCanvasSizeForViewport();
   }, false);
+  if (window.visualViewport) {
+	window.visualViewport.addEventListener('resize', updateCanvasSizeForViewport, false);
+	window.visualViewport.addEventListener('scroll', updateCanvasSizeForViewport, false);
+  }
 
   setInterval(gameLoop, 25);
   
@@ -678,7 +685,7 @@ function decorateControlLabels()
 	}
 }
 //spawn enemies regularly
-setTimeout(spawnEnemy, enemyInterval);
+setTimeout(spawnEnemy, getEnemySpawnDelay());
 
 
 var notBeingSprayed = true;
@@ -915,6 +922,26 @@ function getRandomEnemyTargetX()
 		target = canvas.width;
 	}
 	return target;
+}
+
+function canSpawnEnemyInLane(laneX, minGapY)
+{
+	return true;
+}
+
+function isEnemySentenceEndToken(token)
+{
+	if (!token) {
+		return false;
+	}
+	var t = token.toString().trim();
+	return /[.!?]["')\]]*$/.test(t);
+}
+
+function getEnemySpawnDelay()
+{
+	// Enemy stream cadence is controlled only by spawn delay.
+	return Math.max(10, Math.floor(enemyInterval * 0.6));
 }
 
 function gameLoop() {
@@ -1474,42 +1501,47 @@ function spawnEnemy ()
 {
 if(enemies.length<enemyTotal)
 {
-	//console.log("Enemy Spawned!"+enemyInterval);
-	//get new word for the enemy
-	var enemyWord = enemyTxt [curEnIndex];
-	curEnIndex ++;
-
-	if (curEnIndex > maxEnIndex)
-	{
-	curEnIndex = 0;
-	}
-	
-	//get a random x start position inside the screen
-	var startX =Math.floor((Math.random()*canvas.width));
-	// Missile-like movement: mostly straight descent with slight ballistic curve.
-	var speed = Math.floor((Math.random()*enemySpeedVar)+enemySpeedBase); 
-	var targetX = getRandomEnemyTargetX();
-	var targetY = canvas.height + 50;
-	var dx = targetX - startX;
-	var dy = targetY + 50;
-	var dMag = Math.sqrt(dx*dx + dy*dy);
-	if (dMag < 1) {
-		dMag = 1;
-	}
-	var vx = (dx / dMag) * speed * 1.15;
-	var vy = Math.abs((dy / dMag) * speed * 1.15);
-	var ax = (targetX - startX) / canvas.width * 0.004;
-	var ay = (0.012 + speed * 0.0015) * 1.15;
+		//console.log("Enemy Spawned!"+enemyInterval);
+		//get new word for the enemy
+		var enemyWord = enemyTxt [curEnIndex];
+		if (!enemyWord) {
+			enemyWord = "";
+		}
+		
+			// Enemy lasers stream from fixed lanes at the top (non-random flow).
+			var lanes = [canvas.width * 0.125, canvas.width * 0.5, canvas.width * 0.875];
+			if (!enemySentenceLaneActive) {
+				enemyStreamLaneIndex = enemySentenceLaneIndex % lanes.length;
+				enemySentenceLaneActive = true;
+			}
+			var startX = lanes[enemyStreamLaneIndex % lanes.length];
+			// Stream-like downward motion with fixed speed for regular spacing.
+			var speed = Math.max(1, enemySpeedBase);
+			var targetX = startX;
+		var vx = 0;
+		var vy = Math.max(1, speed * 1.15);
+		var ax = 0;
+		var ay = 0;
 	
 	//get bounding box by putting word in invisible div and measuring it
-	document.getElementById("Test").innerHTML=enemyWord;
-	var divGuide = document.getElementById("Test");
-	divGuide.style.font = enemyStyle;
-	var wordWidth = (divGuide.clientWidth + 1);
-	var wordHeight = (divGuide.clientHeight +1 );
-	
-	if(speed <= 0)
-	{
+		document.getElementById("Test").innerHTML=enemyWord;
+		var divGuide = document.getElementById("Test");
+			divGuide.style.font = enemyStyle;
+			var wordWidth = (divGuide.clientWidth + 1);
+			var wordHeight = (divGuide.clientHeight +1 );
+			
+			curEnIndex ++;
+			if (curEnIndex > maxEnIndex)
+			{
+			curEnIndex = 0;
+			}
+			if (isEnemySentenceEndToken(enemyWord)) {
+				enemySentenceLaneActive = false;
+				enemySentenceLaneIndex += 1;
+			}
+		
+		if(speed <= 0)
+		{
 	speed = 1;
 	}
 	// enemies:
@@ -1520,7 +1552,7 @@ if(enemies.length<enemyTotal)
 	//console.log("add enemy", enemyWord, enemies.length);
 }
 
-setTimeout(spawnEnemy, enemyInterval);
+setTimeout(spawnEnemy, getEnemySpawnDelay());
 }  
 
 function moveEnemy()
@@ -1589,6 +1621,8 @@ function drawEnemy()
 		var flickerBase = (Date.now() * 0.02) + (i * 1.7);
 		ctx.fillStyle =enemyColor;
 		
+		// Motion-mark trail rendering is temporarily disabled.
+		/*
 		// Draw subtle trailing copies opposite motion direction (motion-blur style).
 		for (var t = shadowTrail; t >= 1; t--) {
 			var alpha = 0.08 * (shadowTrail - t + 1);
@@ -1617,6 +1651,7 @@ function drawEnemy()
 				ctx.fillText(enemies[i][3], trailX, trailY);
 			}
 		}
+		*/
 		
 		ctx.fillStyle =enemyColor;
 		
@@ -1719,14 +1754,24 @@ function updateCanvasSizeForViewport()
 	}
 	updateCanvasWidthForLayout();
 
+	var viewportHeight = window.innerHeight;
+	if (window.visualViewport && window.visualViewport.height) {
+		viewportHeight = Math.floor(window.visualViewport.height);
+	}
+	var mobileBottomInset = 0;
+	if (mobileContext) {
+		mobileBottomInset = Math.max(16, window.innerHeight - viewportHeight);
+	}
+
 	// Keep title/canvas/amendment/crime text visible on startup.
 	var reserved = 24
 		+ getElementOuterHeight("header")
 		+ getElementOuterHeight("currentAmendment")
 		+ getElementOuterHeight("amendmentSentence")
 		+ getElementOuterHeight("crimesLine")
-		+ 18;
-	var target = Math.floor(window.innerHeight - reserved);
+		+ 18
+		+ mobileBottomInset;
+	var target = Math.floor(viewportHeight - reserved);
 	if (target < 260) {
 		target = 260;
 	}

@@ -10,3 +10,5 @@
   - directly below it, the first sentence of that amendment
 - Amendment content source is:
   - `https://www.senate.gov/about/origins-foundations/senate-and-constitution/constitution.htm#amendments`
+- The texts coming from the top are called **Enemy lasers**.
+- Enemy lasers should come out in a stream (not random placement).

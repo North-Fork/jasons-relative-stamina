@@ -183,6 +183,14 @@ body.mobile-context #currentAmendment {
 	text-align: center;
 	color: rgba(255, 255, 255, 0.92);
 	min-height: 1.35em;
+	max-height: 2.7em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	white-space: normal;
 }
 
 body.panel-hidden #amendmentSentence {

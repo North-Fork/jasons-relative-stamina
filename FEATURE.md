@@ -40,6 +40,21 @@ Replace the current enemy text source pipeline (currently based on `projects.the
   - manual update only
   - or scripted periodic refresh
 
+## Enemy Lasers Stream Cadence (Spacing Consistency)
+
+### Current Challenge
+Enemy lasers sometimes appear unevenly spaced (some bunch together, some spread apart), even when spawn delay is configured.
+
+### Likely Cause
+- Spawn timing uses `setTimeout` cadence.
+- Enemy movement advances per frame step, not elapsed time.
+- Frame-rate variation and/or max-enemy caps introduce visible cadence jitter.
+
+### Follow-up Direction
+- Move enemy motion to time-based updates (delta-time) so travel distance is tied to elapsed milliseconds.
+- Keep spawn cadence and movement on compatible timing assumptions.
+- Re-check spacing under both desktop and mobile performance conditions.
+
 ---
 
 ## Feature Template
@@ -66,4 +81,3 @@ What user-visible behavior should change.
 
 ### Notes
 Freeform notes and links.
-
