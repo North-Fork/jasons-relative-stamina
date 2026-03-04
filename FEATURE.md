@@ -55,6 +55,38 @@ Enemy lasers sometimes appear unevenly spaced (some bunch together, some spread 
 - Keep spawn cadence and movement on compatible timing assumptions.
 - Re-check spacing under both desktop and mobile performance conditions.
 
+## Session Notes (2026-03-03 / 2026-03-04)
+
+### Current Baseline
+- Assets directory was renamed from `Jasons_Relative_Stamina_files` to `data`.
+- Enemy text source (`data/ABDBody.txt`) is now implemented as **Enemy lasers** stream behavior:
+  - words in the same sentence stay in the same lane
+  - lane changes occur at sentence boundaries
+  - stream cadence is currently controlled by spawn delay only
+- Current enemy spawn delay function:
+  - `getEnemySpawnDelay() = enemyInterval * 0.6`
+- Mobile compatibility updates:
+  - mobile context detection mode added
+  - touch interaction on canvas added (touch drag/shoot)
+  - canvas uses `touch-action: none`
+- Cache-busting URL behavior:
+  - `index.html` auto-appends `?v=1` if missing
+
+### Tagged Baseline
+- Git tag created and pushed:
+  - `V.01-Functioning-Original-Enemy-Drops`
+  - points to commit `5884075`
+
+### Next Session Plan (Requested)
+1. Change Enemy lasers trajectory:
+   - add slight arc
+   - angle descent toward bottom (not purely vertical)
+2. Run all three Enemy laser lanes simultaneously:
+   - each lane should be active at the same time
+   - each lane should feed from different lines in `politician/institutional_corruption_phrases`
+   - avoid the current sequential sentence-lane behavior
+3. Preserve mobile usability and desktop performance while implementing the above.
+
 ---
 
 ## Feature Template
