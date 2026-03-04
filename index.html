@@ -4,6 +4,17 @@
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<script>
+		(function () {
+			try {
+				var u = new URL(window.location.href);
+				if (!u.searchParams.has("v")) {
+					u.searchParams.set("v", "1");
+					window.location.replace(u.toString());
+				}
+			} catch (e) {}
+		})();
+	</script>
 
 	<script src="./data/webfont.js"></script>
 	<link href="./data/css" rel="stylesheet" type="text/css">
