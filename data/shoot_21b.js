@@ -517,6 +517,7 @@ var laserSpawnCount = 0;
 var currentAmendmentLabel = "Amendment I";
 var currentAmendmentSentence = "";
 var amendmentFirstSentenceByLabel = {};
+var amendmentLabels = [];
 var laserSource = "data/ABDQuotes.txt";
 var fragmentSource ="data/ABDReferences.txt";
 
@@ -788,6 +789,7 @@ function extractFirstSentenceFromWordIndex(startIndex)
 function buildAmendmentSentenceMap()
 {
 	amendmentFirstSentenceByLabel = {};
+	amendmentLabels = [];
 	for (var i = 0; i < laserTxt.length - 1; i++) {
 		var current = normalizeTokenForAmendment(laserTxt[i]);
 		var next = normalizeTokenForAmendment(laserTxt[i + 1]);
@@ -795,9 +797,29 @@ function buildAmendmentSentenceMap()
 			var label = "Amendment " + next.toUpperCase();
 			if (!amendmentFirstSentenceByLabel[label]) {
 				amendmentFirstSentenceByLabel[label] = extractFirstSentenceFromWordIndex(i + 2);
+				amendmentLabels.push(label);
 			}
 		}
 	}
+}
+
+function getRandomAmendmentLabel(excludeLabel)
+{
+	if (!amendmentLabels.length) {
+		return excludeLabel || "Amendment I";
+	}
+	if (amendmentLabels.length === 1) {
+		return amendmentLabels[0];
+	}
+	var pick = amendmentLabels[Math.floor(Math.random() * amendmentLabels.length)];
+	if (excludeLabel && pick === excludeLabel) {
+		var tries = 6;
+		while (pick === excludeLabel && tries > 0) {
+			pick = amendmentLabels[Math.floor(Math.random() * amendmentLabels.length)];
+			tries -= 1;
+		}
+	}
+	return pick;
 }
 function showCrimesLine()
 {
@@ -843,13 +865,7 @@ function updateCrimesLineFade()
 function initializeCurrentAmendment()
 {
 	buildAmendmentSentenceMap();
-	for (var i = 0; i < laserTxt.length; i++) {
-		var label = extractAmendmentLabel(laserTxt[i], laserTxt[i - 1], laserTxt[i + 1]);
-		if (label) {
-			currentAmendmentLabel = label;
-			break;
-		}
-	}
+	currentAmendmentLabel = getRandomAmendmentLabel(currentAmendmentLabel);
 	updateCurrentAmendmentDisplay();
 }
 
@@ -1260,7 +1276,7 @@ function spawnLaser()
 	var laserWord = laserTxt [curLaIndex];
 	var amendmentLabel = extractAmendmentLabel(laserWord, laserTxt[curLaIndex - 1], laserTxt[curLaIndex + 1]);
 	if (amendmentLabel) {
-		currentAmendmentLabel = amendmentLabel;
+		currentAmendmentLabel = getRandomAmendmentLabel(currentAmendmentLabel);
 		updateCurrentAmendmentDisplay();
 	}
 	curLaIndex ++;
