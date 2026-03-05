@@ -9,7 +9,14 @@
 			try {
 				var u = new URL(window.location.href);
 				if (!u.searchParams.has("v")) {
-					u.searchParams.set("v", "1");
+					var key = "staminaSessionVersionCounter";
+					var prev = parseInt(sessionStorage.getItem(key) || "0", 10);
+					if (isNaN(prev) || prev < 0) {
+						prev = 0;
+					}
+					var next = prev + 1;
+					sessionStorage.setItem(key, String(next));
+					u.searchParams.set("v", String(next));
 					window.location.replace(u.toString());
 				}
 			} catch (e) {}
