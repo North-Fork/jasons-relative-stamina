@@ -89,6 +89,30 @@ Enemy lasers sometimes appear unevenly spaced (some bunch together, some spread 
    - avoid the current sequential sentence-lane behavior
 3. Preserve mobile usability and desktop performance while implementing the above.
 
+## Session Notes (2026-03-05)
+
+### Mobile Tilt Permission + Prompt
+- Added explicit mobile permission flow for sensors:
+  - `Enable Tilt Control` overlay on top of canvas
+  - requests `DeviceOrientationEvent.requestPermission()` / `DeviceMotionEvent.requestPermission()` on user gesture
+  - prompt fades after 5 seconds of inactivity
+
+### Terminology Added
+- Overlay control name: **Enable button**
+- Text inside it: **Enable text**
+
+### Open Issue (Needs Follow-up)
+- On iPhone/Safari, changing Enable text pixel size in code does not reliably show expected visual size changes.
+- Multiple attempts were made with inline styles and forced font-size application.
+- Current code centralizes size in `enableTextSizePx` and applies via helper using `font-size: <px> !important`.
+- User-visible behavior is still inconsistent and needs focused debugging.
+
+### Tomorrow's Debug Plan
+1. Add temporary visual debug readout showing computed style (`getComputedStyle(tiltEnableBtn).fontSize`) on-device.
+2. Inspect iOS text autoscaling and viewport interactions (`-webkit-text-size-adjust`, meta viewport, button UA styles).
+3. Move Enable button styling from JS inline styles to dedicated CSS rule with high specificity and controlled class.
+4. Apply same stable pattern to other interface text sizing controls once resolved.
+
 ---
 
 ## Feature Template

@@ -14,6 +14,8 @@
 - Enemy lasers should come out in a stream (not random placement).
 - The words fired from the bottom are called **Friend laser**.
 - The left/center/right Friend laser anchor points are called **Friend laser bases**.
+- The mobile overlay control is called the **Enable button**.
+- The string shown inside the Enable button is called the **Enable text**.
 - Version-check workflow for testing:
   - after each push, report the next `?v=` value to use in the URL
   - keep the value simple and incrementing for that session (`1`, `2`, `3`, ...)
