@@ -857,12 +857,15 @@ function ensureTiltPrompt()
 	btn.style.height = "80px";
 	btn.style.padding = "10px";
 	btn.style.font = "700 14px/1 Arial, sans-serif";
+	btn.style.fontSize = "14px";
 	btn.style.letterSpacing = "0.04em";
 	btn.style.textTransform = "uppercase";
 	btn.style.display = "flex";
 	btn.style.alignItems = "center";
 	btn.style.justifyContent = "center";
 	btn.style.whiteSpace = "nowrap";
+	btn.style.webkitTextSizeAdjust = "100%";
+	btn.style.textSizeAdjust = "100%";
 	btn.style.border = "1px solid rgba(255,255,255,0.35)";
 	btn.style.borderRadius = "8px";
 	btn.style.background = "rgba(0,0,0,0.62)";
@@ -904,6 +907,7 @@ function positionTiltPromptOverCanvas()
 	tiltPromptEl.style.top = Math.round(rect.top) + "px";
 	tiltPromptEl.style.width = Math.max(120, Math.round(rect.width)) + "px";
 	tiltPromptEl.style.height = h + "px";
+	tiltPromptEl.style.fontSize = "14px";
 }
 
 function armTiltPromptAutoFade()
