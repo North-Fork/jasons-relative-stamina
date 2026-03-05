@@ -848,7 +848,7 @@ function ensureTiltPrompt()
 	var btn = document.createElement("button");
 	btn.id = "tiltEnableBtn";
 	btn.type = "button";
-	btn.textContent = "ENABLE TITLE CONTROL";
+	btn.textContent = "ENABLE TILT CONTROL";
 	btn.style.position = "fixed";
 	btn.style.left = "12px";
 	btn.style.top = "12px";
@@ -856,7 +856,7 @@ function ensureTiltPrompt()
 	btn.style.width = "240px";
 	btn.style.height = "80px";
 	btn.style.padding = "10px";
-	btn.style.font = "700 64px/1.2 Arial, sans-serif";
+	btn.style.font = "700 48px/1.2 Arial, sans-serif";
 	btn.style.letterSpacing = "0.04em";
 	btn.style.border = "1px solid rgba(255,255,255,0.35)";
 	btn.style.borderRadius = "8px";
