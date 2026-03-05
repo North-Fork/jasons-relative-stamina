@@ -692,6 +692,9 @@ var notBeingSprayed = true;
 var laserOriginMode = "s";
 var tiltControlListening = false;
 var tiltPermissionRequested = false;
+var tiltLastGamma = null;
+var tiltFilteredGamma = null;
+var tiltBaselineGamma = null;
 
 function setLaserOriginMode(mode)
 {
@@ -727,18 +730,28 @@ function getEffectiveTiltGamma(evt)
 	return gamma !== null ? gamma : beta;
 }
 
-function tiltGammaToOriginMode(gamma)
+function tiltDeltaToOriginMode(delta)
 {
-	if (gamma === null || typeof gamma !== "number") {
+	if (delta === null || typeof delta !== "number") {
 		return "s";
 	}
-	if (gamma <= -8) {
+	if (delta <= -8) {
 		return "a";
 	}
-	if (gamma >= 8) {
+	if (delta >= 8) {
 		return "d";
 	}
 	return "s";
+}
+
+function recenterTiltBaseline()
+{
+	if (typeof tiltLastGamma !== "number") {
+		return;
+	}
+	tiltBaselineGamma = tiltLastGamma;
+	tiltFilteredGamma = tiltLastGamma;
+	setLaserOriginMode("s");
 }
 
 function onDeviceOrientation(evt)
@@ -750,7 +763,18 @@ function onDeviceOrientation(evt)
 	if (gamma === null) {
 		return;
 	}
-	setLaserOriginMode(tiltGammaToOriginMode(gamma));
+	tiltLastGamma = gamma;
+	if (tiltBaselineGamma === null) {
+		tiltBaselineGamma = gamma;
+		tiltFilteredGamma = gamma;
+	}
+	if (tiltFilteredGamma === null) {
+		tiltFilteredGamma = gamma;
+	} else {
+		tiltFilteredGamma = (tiltFilteredGamma * 0.8) + (gamma * 0.2);
+	}
+	var delta = tiltFilteredGamma - tiltBaselineGamma;
+	setLaserOriginMode(tiltDeltaToOriginMode(delta));
 }
 
 function startTiltControl()
@@ -1117,6 +1141,9 @@ function touchIsDown(evt) {
 	var touch = getPrimaryTouchPoint(evt);
 	if (!touch) {
 		return;
+	}
+	if (mobileContext) {
+		recenterTiltBaseline();
 	}
 	mouseIsDown(touch);
 }
