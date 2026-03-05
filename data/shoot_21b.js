@@ -692,7 +692,6 @@ var notBeingSprayed = true;
 var laserOriginMode = "s";
 var tiltControlListening = false;
 var tiltPermissionRequested = false;
-var tiltHasSignal = false;
 
 function setLaserOriginMode(mode)
 {
@@ -733,10 +732,10 @@ function tiltGammaToOriginMode(gamma)
 	if (gamma === null || typeof gamma !== "number") {
 		return "s";
 	}
-	if (gamma <= -10) {
+	if (gamma <= -8) {
 		return "a";
 	}
-	if (gamma >= 10) {
+	if (gamma >= 8) {
 		return "d";
 	}
 	return "s";
@@ -751,7 +750,6 @@ function onDeviceOrientation(evt)
 	if (gamma === null) {
 		return;
 	}
-	tiltHasSignal = true;
 	setLaserOriginMode(tiltGammaToOriginMode(gamma));
 }
 
@@ -1131,16 +1129,6 @@ function touchMove(evt) {
 	}
 	mousePos = getMousePos(touch);
 	mouseOnCanvas = true;
-	if (mobileContext && !tiltHasSignal) {
-		var x = mousePos.x;
-		if (x < canvas.width / 3) {
-			setLaserOriginMode("a");
-		} else if (x > (canvas.width * 2) / 3) {
-			setLaserOriginMode("d");
-		} else {
-			setLaserOriginMode("s");
-		}
-	}
 }
 
 function touchIsUp(evt) {
