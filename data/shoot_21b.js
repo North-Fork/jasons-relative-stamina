@@ -690,6 +690,70 @@ setTimeout(spawnEnemy, getEnemySpawnDelay());
 
 var notBeingSprayed = true;
 var laserOriginMode = "s";
+var tiltControlListening = false;
+var tiltPermissionRequested = false;
+
+function setLaserOriginMode(mode)
+{
+	if (mode !== "a" && mode !== "s" && mode !== "d") {
+		return;
+	}
+	laserOriginMode = mode;
+	originX = getLaserOriginX();
+}
+
+function tiltGammaToOriginMode(gamma)
+{
+	if (gamma <= -12) {
+		return "a";
+	}
+	if (gamma >= 12) {
+		return "d";
+	}
+	return "s";
+}
+
+function onDeviceOrientation(evt)
+{
+	if (!mobileContext || !evt || typeof evt.gamma !== "number") {
+		return;
+	}
+	setLaserOriginMode(tiltGammaToOriginMode(evt.gamma));
+}
+
+function startTiltControl()
+{
+	if (tiltControlListening || !window.DeviceOrientationEvent) {
+		return;
+	}
+	window.addEventListener("deviceorientation", onDeviceOrientation, true);
+	tiltControlListening = true;
+}
+
+function maybeEnableTiltControl()
+{
+	if (!mobileContext || !window.DeviceOrientationEvent) {
+		return;
+	}
+	if (typeof DeviceOrientationEvent.requestPermission === "function") {
+		// iOS requires a user gesture; request from first touch event.
+		if (tiltPermissionRequested) {
+			return;
+		}
+		tiltPermissionRequested = true;
+		DeviceOrientationEvent.requestPermission()
+			.then(function(permissionState) {
+				if (permissionState === "granted") {
+					startTiltControl();
+				}
+			})
+			.catch(function() {
+				// Keep existing touch controls if permission is denied.
+			});
+		return;
+	}
+	startTiltControl();
+}
 
 function getLaserOriginX()
 {
@@ -1016,6 +1080,7 @@ function getPrimaryTouchPoint(evt) {
 }
 
 function touchIsDown(evt) {
+	maybeEnableTiltControl();
 	evt.preventDefault();
 	var touch = getPrimaryTouchPoint(evt);
 	if (!touch) {
@@ -1702,6 +1767,7 @@ function applyMobileContextMode()
 	}
 	if (mobileContext) {
 		setInterfaceVisibility(false);
+		maybeEnableTiltControl();
 	}
 }
 
@@ -1854,13 +1920,13 @@ function keyDown(e) {
 		break;
 	  //a/s/d select laser launch origin (left / center / right)
 		case 65: //a
-			laserOriginMode = "a";
+			setLaserOriginMode("a");
 		break;
 		case 83: //s
-			laserOriginMode = "s";
+			setLaserOriginMode("s");
 		break;
 		case 68: //d
-			laserOriginMode = "d";
+			setLaserOriginMode("d");
 		break;
 	  }
 	  updateValText();
