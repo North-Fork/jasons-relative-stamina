@@ -692,9 +692,11 @@ var notBeingSprayed = true;
 var laserOriginMode = "s";
 var tiltControlListening = false;
 var tiltPermissionRequested = false;
+var tiltPermissionGranted = false;
 var tiltLastGamma = null;
 var tiltFilteredGamma = null;
 var tiltBaselineGamma = null;
+var tiltPromptEl = null;
 
 function setLaserOriginMode(mode)
 {
@@ -833,17 +835,64 @@ function startTiltControl()
 		window.addEventListener("devicemotion", onDeviceMotion, true);
 	}
 	tiltControlListening = true;
+	tiltPermissionGranted = true;
+	updateTiltPromptVisibility();
 }
 
-function maybeEnableTiltControl()
+function ensureTiltPrompt()
 {
+	if (!mobileContext || tiltPromptEl || !document.body) {
+		return;
+	}
+	var btn = document.createElement("button");
+	btn.id = "tiltEnableBtn";
+	btn.type = "button";
+	btn.textContent = "Enable Tilt Control";
+	btn.style.position = "fixed";
+	btn.style.right = "12px";
+	btn.style.top = "12px";
+	btn.style.zIndex = "9999";
+	btn.style.padding = "8px 10px";
+	btn.style.font = "600 12px/1.2 Arial, sans-serif";
+	btn.style.border = "1px solid rgba(255,255,255,0.45)";
+	btn.style.borderRadius = "7px";
+	btn.style.background = "rgba(0,0,0,0.7)";
+	btn.style.color = "#fff";
+	btn.addEventListener("click", function() {
+		maybeEnableTiltControl(true);
+	}, false);
+	document.body.appendChild(btn);
+	tiltPromptEl = btn;
+}
+
+function updateTiltPromptVisibility()
+{
+	if (!mobileContext || !tiltPromptEl) {
+		return;
+	}
+	tiltPromptEl.style.display = tiltPermissionGranted ? "none" : "block";
+}
+
+function maybeEnableTiltControl(fromUserGesture)
+{
+	if (typeof fromUserGesture !== "boolean") {
+		fromUserGesture = false;
+	}
 	if (!mobileContext) {
 		return;
 	}
 	if (!window.DeviceOrientationEvent && !window.DeviceMotionEvent) {
 		return;
 	}
-	if (!tiltPermissionRequested) {
+	ensureTiltPrompt();
+	var needsPermission =
+		(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") ||
+		(window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function");
+	if (needsPermission) {
+		if (!fromUserGesture) {
+			updateTiltPromptVisibility();
+			return;
+		}
 		tiltPermissionRequested = true;
 		var requests = [];
 		if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") {
@@ -852,21 +901,22 @@ function maybeEnableTiltControl()
 		if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
 			requests.push(DeviceMotionEvent.requestPermission());
 		}
-		if (requests.length) {
-			Promise.allSettled(requests).then(function(results) {
-				var granted = false;
-				for (var i = 0; i < results.length; i++) {
-					if (results[i].status === "fulfilled" && results[i].value === "granted") {
-						granted = true;
-						break;
-					}
+		Promise.allSettled(requests).then(function(results) {
+			var granted = false;
+			for (var i = 0; i < results.length; i++) {
+				if (results[i].status === "fulfilled" && results[i].value === "granted") {
+					granted = true;
+					break;
 				}
-				if (granted) {
-					startTiltControl();
-				}
-			});
-			return;
-		}
+			}
+			if (granted) {
+				startTiltControl();
+			} else {
+				tiltPermissionGranted = false;
+				updateTiltPromptVisibility();
+			}
+		});
+		return;
 	}
 	startTiltControl();
 }
@@ -1196,7 +1246,7 @@ function getPrimaryTouchPoint(evt) {
 }
 
 function touchIsDown(evt) {
-	maybeEnableTiltControl();
+	maybeEnableTiltControl(true);
 	evt.preventDefault();
 	var touch = getPrimaryTouchPoint(evt);
 	if (!touch) {
@@ -1886,7 +1936,7 @@ function applyMobileContextMode()
 	}
 	if (mobileContext) {
 		setInterfaceVisibility(false);
-		maybeEnableTiltControl();
+		maybeEnableTiltControl(false);
 	}
 }
 
