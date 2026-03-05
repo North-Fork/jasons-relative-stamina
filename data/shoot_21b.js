@@ -777,36 +777,96 @@ function onDeviceOrientation(evt)
 	setLaserOriginMode(tiltDeltaToOriginMode(delta));
 }
 
-function startTiltControl()
+function onDeviceMotion(evt)
 {
-	if (tiltControlListening || !window.DeviceOrientationEvent) {
+	if (!mobileContext || !evt || !evt.accelerationIncludingGravity) {
 		return;
 	}
-	window.addEventListener("deviceorientation", onDeviceOrientation, true);
+	var g = evt.accelerationIncludingGravity;
+	if (typeof g.x !== "number" || typeof g.y !== "number") {
+		return;
+	}
+	var angle = 0;
+	if (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === "number") {
+		angle = window.screen.orientation.angle;
+	} else if (typeof window.orientation === "number") {
+		angle = window.orientation;
+	}
+	angle = ((angle % 360) + 360) % 360;
+
+	// Map gravity to a left/right scalar in the same sign convention as gamma.
+	var pseudoGamma = g.x;
+	if (angle === 90) {
+		pseudoGamma = g.y;
+	} else if (angle === 180) {
+		pseudoGamma = -g.x;
+	} else if (angle === 270) {
+		pseudoGamma = -g.y;
+	}
+	if (pseudoGamma > 20 || pseudoGamma < -20) {
+		return;
+	}
+	tiltLastGamma = pseudoGamma;
+	if (tiltBaselineGamma === null) {
+		tiltBaselineGamma = pseudoGamma;
+		tiltFilteredGamma = pseudoGamma;
+	}
+	if (tiltFilteredGamma === null) {
+		tiltFilteredGamma = pseudoGamma;
+	} else {
+		tiltFilteredGamma = (tiltFilteredGamma * 0.8) + (pseudoGamma * 0.2);
+	}
+	var delta = (tiltFilteredGamma - tiltBaselineGamma) * 4;
+	setLaserOriginMode(tiltDeltaToOriginMode(delta));
+}
+
+function startTiltControl()
+{
+	if (tiltControlListening) {
+		return;
+	}
+	if (window.DeviceOrientationEvent) {
+		window.addEventListener("deviceorientation", onDeviceOrientation, true);
+		window.addEventListener("deviceorientationabsolute", onDeviceOrientation, true);
+	}
+	if (window.DeviceMotionEvent) {
+		window.addEventListener("devicemotion", onDeviceMotion, true);
+	}
 	tiltControlListening = true;
 }
 
 function maybeEnableTiltControl()
 {
-	if (!mobileContext || !window.DeviceOrientationEvent) {
+	if (!mobileContext) {
 		return;
 	}
-	if (typeof DeviceOrientationEvent.requestPermission === "function") {
-		// iOS requires a user gesture; request from first touch event.
-		if (tiltPermissionRequested) {
-			return;
-		}
+	if (!window.DeviceOrientationEvent && !window.DeviceMotionEvent) {
+		return;
+	}
+	if (!tiltPermissionRequested) {
 		tiltPermissionRequested = true;
-		DeviceOrientationEvent.requestPermission()
-			.then(function(permissionState) {
-				if (permissionState === "granted") {
+		var requests = [];
+		if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") {
+			requests.push(DeviceOrientationEvent.requestPermission());
+		}
+		if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
+			requests.push(DeviceMotionEvent.requestPermission());
+		}
+		if (requests.length) {
+			Promise.allSettled(requests).then(function(results) {
+				var granted = false;
+				for (var i = 0; i < results.length; i++) {
+					if (results[i].status === "fulfilled" && results[i].value === "granted") {
+						granted = true;
+						break;
+					}
+				}
+				if (granted) {
 					startTiltControl();
 				}
-			})
-			.catch(function() {
-				// Keep existing touch controls if permission is denied.
 			});
-		return;
+			return;
+		}
 	}
 	startTiltControl();
 }

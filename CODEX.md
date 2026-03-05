@@ -12,3 +12,8 @@
   - `https://www.senate.gov/about/origins-foundations/senate-and-constitution/constitution.htm#amendments`
 - The texts coming from the top are called **Enemy lasers**.
 - Enemy lasers should come out in a stream (not random placement).
+- The words fired from the bottom are called **Friend laser**.
+- The left/center/right Friend laser anchor points are called **Friend laser bases**.
+- Version-check workflow for testing:
+  - after each push, report the next `?v=` value to use in the URL
+  - keep the value simple and incrementing for that session (`1`, `2`, `3`, ...)
