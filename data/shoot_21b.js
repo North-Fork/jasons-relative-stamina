@@ -692,6 +692,7 @@ var notBeingSprayed = true;
 var laserOriginMode = "s";
 var tiltControlListening = false;
 var tiltPermissionRequested = false;
+var tiltHasSignal = false;
 
 function setLaserOriginMode(mode)
 {
@@ -702,12 +703,40 @@ function setLaserOriginMode(mode)
 	originX = getLaserOriginX();
 }
 
+function getEffectiveTiltGamma(evt)
+{
+	if (!evt) {
+		return null;
+	}
+	var gamma = (typeof evt.gamma === "number") ? evt.gamma : null;
+	var beta = (typeof evt.beta === "number") ? evt.beta : null;
+	if (gamma === null && beta === null) {
+		return null;
+	}
+	var angle = 0;
+	if (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === "number") {
+		angle = window.screen.orientation.angle;
+	} else if (typeof window.orientation === "number") {
+		angle = window.orientation;
+	}
+	angle = ((angle % 360) + 360) % 360;
+
+	// Portrait: gamma tracks left-right tilt. Landscape: beta maps better.
+	if ((angle === 90 || angle === 270) && beta !== null) {
+		return angle === 90 ? beta : -beta;
+	}
+	return gamma !== null ? gamma : beta;
+}
+
 function tiltGammaToOriginMode(gamma)
 {
-	if (gamma <= -12) {
+	if (gamma === null || typeof gamma !== "number") {
+		return "s";
+	}
+	if (gamma <= -10) {
 		return "a";
 	}
-	if (gamma >= 12) {
+	if (gamma >= 10) {
 		return "d";
 	}
 	return "s";
@@ -715,10 +744,15 @@ function tiltGammaToOriginMode(gamma)
 
 function onDeviceOrientation(evt)
 {
-	if (!mobileContext || !evt || typeof evt.gamma !== "number") {
+	if (!mobileContext || !evt) {
 		return;
 	}
-	setLaserOriginMode(tiltGammaToOriginMode(evt.gamma));
+	var gamma = getEffectiveTiltGamma(evt);
+	if (gamma === null) {
+		return;
+	}
+	tiltHasSignal = true;
+	setLaserOriginMode(tiltGammaToOriginMode(gamma));
 }
 
 function startTiltControl()
@@ -1097,6 +1131,16 @@ function touchMove(evt) {
 	}
 	mousePos = getMousePos(touch);
 	mouseOnCanvas = true;
+	if (mobileContext && !tiltHasSignal) {
+		var x = mousePos.x;
+		if (x < canvas.width / 3) {
+			setLaserOriginMode("a");
+		} else if (x > (canvas.width * 2) / 3) {
+			setLaserOriginMode("d");
+		} else {
+			setLaserOriginMode("s");
+		}
+	}
 }
 
 function touchIsUp(evt) {
