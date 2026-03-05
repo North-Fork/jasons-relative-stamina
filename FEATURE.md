@@ -70,7 +70,9 @@ Enemy lasers sometimes appear unevenly spaced (some bunch together, some spread 
   - touch interaction on canvas added (touch drag/shoot)
   - canvas uses `touch-action: none`
 - Cache-busting URL behavior:
-  - `index.html` auto-appends `?v=1` if missing
+  - `index.html` auto-appends `?v=<sessionCounter>` if missing
+  - counter starts at `1` for a new browser session and increments (`2`, `3`, ...)
+  - after each push, report the next `?v=` number for user verification
 
 ### Tagged Baseline
 - Git tag created and pushed:
