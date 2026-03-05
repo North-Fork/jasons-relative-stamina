@@ -856,7 +856,7 @@ function ensureTiltPrompt()
 	btn.style.width = "240px";
 	btn.style.height = "80px";
 	btn.style.padding = "10px";
-	btn.style.font = "700 32px/1 Arial, sans-serif";
+	btn.style.font = "700 24px/1 Arial, sans-serif";
 	btn.style.letterSpacing = "0.04em";
 	btn.style.textTransform = "uppercase";
 	btn.style.display = "flex";
