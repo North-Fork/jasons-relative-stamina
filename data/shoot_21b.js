@@ -697,6 +697,7 @@ var tiltLastGamma = null;
 var tiltFilteredGamma = null;
 var tiltBaselineGamma = null;
 var tiltPromptEl = null;
+var tiltPromptHideTimer = null;
 
 function setLaserOriginMode(mode)
 {
@@ -849,20 +850,29 @@ function ensureTiltPrompt()
 	btn.type = "button";
 	btn.textContent = "Enable Tilt Control";
 	btn.style.position = "fixed";
-	btn.style.right = "12px";
+	btn.style.left = "12px";
 	btn.style.top = "12px";
 	btn.style.zIndex = "9999";
-	btn.style.padding = "8px 10px";
-	btn.style.font = "600 12px/1.2 Arial, sans-serif";
-	btn.style.border = "1px solid rgba(255,255,255,0.45)";
-	btn.style.borderRadius = "7px";
-	btn.style.background = "rgba(0,0,0,0.7)";
+	btn.style.width = "240px";
+	btn.style.height = "80px";
+	btn.style.padding = "10px";
+	btn.style.font = "700 16px/1.2 Arial, sans-serif";
+	btn.style.letterSpacing = "0.04em";
+	btn.style.border = "1px solid rgba(255,255,255,0.35)";
+	btn.style.borderRadius = "8px";
+	btn.style.background = "rgba(0,0,0,0.62)";
 	btn.style.color = "#fff";
+	btn.style.opacity = "1";
+	btn.style.transition = "opacity 600ms ease";
+	btn.style.touchAction = "manipulation";
 	btn.addEventListener("click", function() {
+		armTiltPromptAutoFade();
 		maybeEnableTiltControl(true);
 	}, false);
 	document.body.appendChild(btn);
 	tiltPromptEl = btn;
+	positionTiltPromptOverCanvas();
+	armTiltPromptAutoFade();
 }
 
 function updateTiltPromptVisibility()
@@ -870,7 +880,44 @@ function updateTiltPromptVisibility()
 	if (!mobileContext || !tiltPromptEl) {
 		return;
 	}
-	tiltPromptEl.style.display = tiltPermissionGranted ? "none" : "block";
+	if (tiltPermissionGranted) {
+		tiltPromptEl.style.display = "none";
+		return;
+	}
+	tiltPromptEl.style.display = "block";
+	positionTiltPromptOverCanvas();
+}
+
+function positionTiltPromptOverCanvas()
+{
+	if (!tiltPromptEl || !canvas) {
+		return;
+	}
+	var rect = canvas.getBoundingClientRect();
+	var h = Math.max(56, Math.floor(rect.height * 0.2));
+	tiltPromptEl.style.left = Math.round(rect.left) + "px";
+	tiltPromptEl.style.top = Math.round(rect.top) + "px";
+	tiltPromptEl.style.width = Math.max(120, Math.round(rect.width)) + "px";
+	tiltPromptEl.style.height = h + "px";
+}
+
+function armTiltPromptAutoFade()
+{
+	if (!tiltPromptEl || tiltPermissionGranted || !mobileContext) {
+		return;
+	}
+	tiltPromptEl.style.opacity = "1";
+	tiltPromptEl.style.pointerEvents = "auto";
+	if (tiltPromptHideTimer) {
+		clearTimeout(tiltPromptHideTimer);
+	}
+	tiltPromptHideTimer = setTimeout(function() {
+		if (!tiltPromptEl || tiltPermissionGranted) {
+			return;
+		}
+		tiltPromptEl.style.opacity = "0";
+		tiltPromptEl.style.pointerEvents = "none";
+	}, 5000);
 }
 
 function maybeEnableTiltControl(fromUserGesture)
@@ -1247,6 +1294,7 @@ function getPrimaryTouchPoint(evt) {
 
 function touchIsDown(evt) {
 	maybeEnableTiltControl(true);
+	armTiltPromptAutoFade();
 	evt.preventDefault();
 	var touch = getPrimaryTouchPoint(evt);
 	if (!touch) {
@@ -1937,6 +1985,7 @@ function applyMobileContextMode()
 	if (mobileContext) {
 		setInterfaceVisibility(false);
 		maybeEnableTiltControl(false);
+		armTiltPromptAutoFade();
 	}
 }
 
@@ -2014,6 +2063,7 @@ function updateCanvasSizeForViewport()
 	height = canvas.height;
 	originY = canvas.height + 20;
 	originX = getLaserOriginX();
+	positionTiltPromptOverCanvas();
 }
 
 function keyDown(e) {
