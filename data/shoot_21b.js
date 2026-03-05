@@ -698,6 +698,17 @@ var tiltFilteredGamma = null;
 var tiltBaselineGamma = null;
 var tiltPromptEl = null;
 var tiltPromptHideTimer = null;
+var enableTextSizePx = 30;
+
+function applyEnableTextSize(el)
+{
+	if (!el) {
+		return;
+	}
+	var size = Math.max(8, parseInt(enableTextSizePx, 10) || 30) + "px";
+	// Use !important to avoid UA/button default overrides on mobile Safari.
+	el.style.setProperty("font-size", size, "important");
+}
 
 function setLaserOriginMode(mode)
 {
@@ -857,7 +868,6 @@ function ensureTiltPrompt()
 	btn.style.height = "80px";
 	btn.style.padding = "10px";
 	btn.style.font = "700 30px/1 Arial, sans-serif";
-	btn.style.fontSize = "30px";
 	btn.style.letterSpacing = "0.04em";
 	btn.style.textTransform = "uppercase";
 	btn.style.display = "flex";
@@ -873,6 +883,7 @@ function ensureTiltPrompt()
 	btn.style.opacity = "1";
 	btn.style.transition = "opacity 600ms ease";
 	btn.style.touchAction = "manipulation";
+	applyEnableTextSize(btn);
 	btn.addEventListener("click", function() {
 		armTiltPromptAutoFade();
 		maybeEnableTiltControl(true);
@@ -907,7 +918,7 @@ function positionTiltPromptOverCanvas()
 	tiltPromptEl.style.top = Math.round(rect.top) + "px";
 	tiltPromptEl.style.width = Math.max(120, Math.round(rect.width)) + "px";
 	tiltPromptEl.style.height = h + "px";
-	tiltPromptEl.style.fontSize = "30px";
+	applyEnableTextSize(tiltPromptEl);
 }
 
 function armTiltPromptAutoFade()
