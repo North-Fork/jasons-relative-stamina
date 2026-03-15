@@ -516,6 +516,8 @@ var curFaIndex = 0;
 var enemyStreamLaneIndex = 0;
 var enemySentenceLaneIndex = 0;
 var enemySentenceLaneActive = false;
+var enemySentenceStartX = null;
+var enemySentenceTargetX = null;
 var laserSpawnCount = 0;
 var currentAmendmentLabel = "Amendment I";
 var currentAmendmentSentence = "";
@@ -570,7 +572,7 @@ canvas.style.backgroundColor = 'rgb('+cHSL[0]+','+cHSL[1]+','+cHSL[2]+')';
   
     loadCrimesPhrases();
 
-enemyTxt = getStringArray(enemySource);
+enemyTxt = normalizePhraseList(getStringArraySpecial(enemySource));
   maxEnIndex = enemyTxt.length-1;
   laserTxt = getStringArray(laserSource);
   maxLaIndex = laserTxt.length-1;
@@ -690,6 +692,8 @@ setTimeout(spawnEnemy, getEnemySpawnDelay());
 
 var notBeingSprayed = true;
 var laserOriginMode = "s";
+// Tilt input is temporarily parked until the iPhone/Safari behavior is debugged.
+var tiltControlEnabled = false;
 var tiltControlListening = false;
 var tiltPermissionRequested = false;
 var tiltPermissionGranted = false;
@@ -760,6 +764,9 @@ function tiltDeltaToOriginMode(delta)
 
 function recenterTiltBaseline()
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (typeof tiltLastGamma !== "number") {
 		return;
 	}
@@ -770,6 +777,9 @@ function recenterTiltBaseline()
 
 function onDeviceOrientation(evt)
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (!mobileContext || !evt) {
 		return;
 	}
@@ -793,6 +803,9 @@ function onDeviceOrientation(evt)
 
 function onDeviceMotion(evt)
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (!mobileContext || !evt || !evt.accelerationIncludingGravity) {
 		return;
 	}
@@ -836,6 +849,9 @@ function onDeviceMotion(evt)
 
 function startTiltControl()
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (tiltControlListening) {
 		return;
 	}
@@ -853,6 +869,9 @@ function startTiltControl()
 
 function ensureTiltPrompt()
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (!mobileContext || tiltPromptEl || !document.body) {
 		return;
 	}
@@ -896,6 +915,12 @@ function ensureTiltPrompt()
 
 function updateTiltPromptVisibility()
 {
+	if (!tiltControlEnabled) {
+		if (tiltPromptEl) {
+			tiltPromptEl.style.display = "none";
+		}
+		return;
+	}
 	if (!mobileContext || !tiltPromptEl) {
 		return;
 	}
@@ -909,6 +934,9 @@ function updateTiltPromptVisibility()
 
 function positionTiltPromptOverCanvas()
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (!tiltPromptEl || !canvas) {
 		return;
 	}
@@ -923,6 +951,9 @@ function positionTiltPromptOverCanvas()
 
 function armTiltPromptAutoFade()
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (!tiltPromptEl || tiltPermissionGranted || !mobileContext) {
 		return;
 	}
@@ -942,6 +973,9 @@ function armTiltPromptAutoFade()
 
 function maybeEnableTiltControl(fromUserGesture)
 {
+	if (!tiltControlEnabled) {
+		return;
+	}
 	if (typeof fromUserGesture !== "boolean") {
 		fromUserGesture = false;
 	}
@@ -1206,17 +1240,26 @@ function initializeCurrentAmendment()
 	updateCurrentAmendmentDisplay();
 }
 
-function getRandomEnemyTargetX()
+function getRandomEnemyStartX()
 {
-	var lanes = [canvas.width * 0.125, canvas.width * 0.5, canvas.width * 0.875];
-	var lane = lanes[Math.floor(Math.random() * lanes.length)];
-	var jitter = (Math.random() - 0.5) * (canvas.width * 0.088);
-	var target = lane + jitter;
-	if (target < 0) {
-		target = 0;
+	var margin = canvas.width * 0.04;
+	var usableWidth = Math.max(1, canvas.width - (margin * 2));
+	return margin + (Math.random() * usableWidth);
+}
+
+function getRandomEnemyTargetX(startX)
+{
+	var centerX = canvas.width * 0.5;
+	var inwardBias = (centerX - startX) * 0.35;
+	var jitter = (Math.random() - 0.5) * (canvas.width * 0.04);
+	var target = startX + inwardBias + jitter;
+	var minX = canvas.width * 0.12;
+	var maxX = canvas.width * 0.88;
+	if (target < minX) {
+		target = minX;
 	}
-	if (target > canvas.width) {
-		target = canvas.width;
+	if (target > maxX) {
+		target = maxX;
 	}
 	return target;
 }
@@ -1313,14 +1356,12 @@ function getPrimaryTouchPoint(evt) {
 }
 
 function touchIsDown(evt) {
-	maybeEnableTiltControl(true);
-	armTiltPromptAutoFade();
 	evt.preventDefault();
 	var touch = getPrimaryTouchPoint(evt);
 	if (!touch) {
 		return;
 	}
-	if (mobileContext) {
+	if (tiltControlEnabled && mobileContext) {
 		recenterTiltBaseline();
 	}
 	mouseIsDown(touch);
@@ -1376,6 +1417,65 @@ var newCoord = cY + Math.sin(angle) * (x - cX) + Math.cos(angle) * (y - cY);
 return newCoord ;
 }
 
+function buildEnemyWordSegments(text)
+{
+	var phrase = (text || "").toString().trim();
+	var words = phrase ? phrase.split(/\s+/) : [];
+	var segments = [];
+	var totalWidth = 0;
+	var spaceWidth = 0;
+	var textHeight = 1;
+	if (!words.length) {
+		return { segments: segments, totalWidth: totalWidth, textHeight: textHeight };
+	}
+	ctx.save();
+	ctx.font = enemyStyle;
+	spaceWidth = ctx.measureText(" ").width;
+	textHeight = parseInt(enemySize, 10) || 1;
+	for (var i = 0; i < words.length; i++) {
+		var wordWidth = ctx.measureText(words[i]).width + 1;
+		segments.push({ text: words[i], width: wordWidth, offsetX: 0, active: true });
+		totalWidth += wordWidth;
+		if (i < words.length - 1) {
+			totalWidth += spaceWidth;
+		}
+	}
+	ctx.restore();
+	var cursor = -totalWidth / 2;
+	for (var j = 0; j < segments.length; j++) {
+		segments[j].offsetX = cursor + (segments[j].width / 2);
+		cursor += segments[j].width + spaceWidth;
+	}
+	return { segments: segments, totalWidth: totalWidth, textHeight: textHeight };
+}
+
+function ensureEnemyWordSegments(enemy)
+{
+	if (!enemy || enemyVertical) {
+		return null;
+	}
+	if (!enemy[12]) {
+		var segmentData = buildEnemyWordSegments(enemy[3]);
+		enemy[12] = segmentData.segments;
+		enemy[4] = segmentData.totalWidth;
+		enemy[5] = Math.max(enemy[5] || 1, segmentData.textHeight / 2);
+	}
+	return enemy[12];
+}
+
+function hasActiveEnemyWordSegments(enemy)
+{
+	var segments = ensureEnemyWordSegments(enemy);
+	if (!segments) {
+		return false;
+	}
+	for (var i = 0; i < segments.length; i++) {
+		if (segments[i].active) {
+			return true;
+		}
+	}
+	return false;
+}
 
 function checkCollision ()
 {
@@ -1442,33 +1542,52 @@ function checkCollision ()
 			var laserPoly = new P(new V(0,0), [new V(lTLx, lTLy), new V(lTRx, lTRy), new V(lBRx, lBRy), new V(lBLx, lBLy)]);
 
 			
-			//since the enemies are always rotated 90 degrees and are axis-aligned, I will define them as a box instead of polygon, inverting their H and W values to compensate
+			var isCollide = false;
+			var hitEnemyWord = enemies[j][3];
+			var hitEnemyX = enemies[j][0];
+			var hitEnemyY = enemies[j][1];
+
 			if (enemyVertical)
 			{
 			var enX = enemies[j][0]-enemies[j][5]/2;
 			var enY = enemies[j][1];
 			var enW = enemies[j][5];
 			var enH = enemies[j][4];
+			var enemyBox = new B(new V(enX,enY),enW, enH).toPolygon();
+			isCollide = SAT.testPolygonPolygon(laserPoly, enemyBox);
 			}
 			else
-			{ //horizontal
-			var enX = enemies[j][0]-enemies[j][4]/2;
-			var enY = enemies[j][1]-enemies[j][5]/2;
-			var enW = enemies[j][4];
-			var enH = enemies[j][5];
-			
+			{
+				var enemySegments = ensureEnemyWordSegments(enemies[j]);
+				if (enemySegments && enemySegments.length) {
+					for (var s = 0; s < enemySegments.length; s++) {
+						if (!enemySegments[s].active) {
+							continue;
+						}
+						var segX = enemies[j][0] + enemySegments[s].offsetX - (enemySegments[s].width / 2);
+						var segY = enemies[j][1] - enemies[j][5] / 2;
+						var segW = enemySegments[s].width;
+						var segH = enemies[j][5];
+						var segmentBox = new B(new V(segX, segY), segW, segH).toPolygon();
+						if (SAT.testPolygonPolygon(laserPoly, segmentBox)) {
+							isCollide = true;
+							hitEnemyWord = enemySegments[s].text;
+							hitEnemyX = enemies[j][0] + enemySegments[s].offsetX;
+							hitEnemyY = enemies[j][1];
+							enemySegments[s].active = false;
+							break;
+						}
+					}
+				}
 			}
-			
-			var enemyBox = new B(new V(enX,enY),enW, enH).toPolygon();
-			
-			var isCollide = SAT.testPolygonPolygon(laserPoly, enemyBox);
 			
 			if (isCollide )
 			{
-			//console.log("Collision!");
-			spawnFragments (lasers[i][5], enemies[j][3], lTLx, lTLy);
+			spawnFragments (lasers[i][5], hitEnemyWord, hitEnemyX, hitEnemyY);
 			lasers.splice(i, 1);
-			enemies.splice(j, 1);
+			if (enemyVertical || !hasActiveEnemyWordSegments(enemies[j])) {
+				enemies.splice(j, 1);
+			}
 			break;
 			}
 			
@@ -1810,27 +1929,24 @@ if(enemies.length<enemyTotal)
 			enemyWord = "";
 		}
 		
-			// Enemy lasers stream from fixed lanes at the top (non-random flow).
-			var lanes = [canvas.width * 0.125, canvas.width * 0.5, canvas.width * 0.875];
+			// Keep each enemy text block aligned to one shared origin, then reposition for the next block.
 			if (!enemySentenceLaneActive) {
-				enemyStreamLaneIndex = enemySentenceLaneIndex % lanes.length;
+				enemySentenceStartX = getRandomEnemyStartX();
+				enemySentenceTargetX = getRandomEnemyTargetX(enemySentenceStartX);
 				enemySentenceLaneActive = true;
 			}
-			var startX = lanes[enemyStreamLaneIndex % lanes.length];
-			// Stream-like downward motion with fixed speed for regular spacing.
+			var startX = enemySentenceStartX;
 			var speed = Math.max(1, enemySpeedBase);
-			var targetX = startX;
+			var targetX = enemySentenceTargetX;
+			var horizontalDelta = targetX - startX;
 		var vx = 0;
-		var vy = Math.max(1, speed * 1.15);
-		var ax = 0;
+		var vy = Math.max(1, speed * 1.12);
+		var ax = horizontalDelta * 0.00003;
 		var ay = 0;
 	
-	//get bounding box by putting word in invisible div and measuring it
-		document.getElementById("Test").innerHTML=enemyWord;
-		var divGuide = document.getElementById("Test");
-			divGuide.style.font = enemyStyle;
-			var wordWidth = (divGuide.clientWidth + 1);
-			var wordHeight = (divGuide.clientHeight +1 );
+	var enemySegmentData = buildEnemyWordSegments(enemyWord);
+		var wordWidth = enemySegmentData.totalWidth;
+		var wordHeight = Math.max(1, enemySegmentData.textHeight);
 			
 			curEnIndex ++;
 			if (curEnIndex > maxEnIndex)
@@ -1839,6 +1955,8 @@ if(enemies.length<enemyTotal)
 			}
 			if (isEnemySentenceEndToken(enemyWord)) {
 				enemySentenceLaneActive = false;
+				enemySentenceStartX = null;
+				enemySentenceTargetX = null;
 				enemySentenceLaneIndex += 1;
 			}
 		
@@ -1848,7 +1966,7 @@ if(enemies.length<enemyTotal)
 	}
 	// enemies:
 	// [0]x [1]y [2]speed [3]word [4]width [5]height [6]vx [7]vy [8]ax [9]ay [10]targetX
-	enemies.push([startX,-50, speed, enemyWord, wordWidth, wordHeight/2, vx, vy, ax, ay, targetX, false]);
+	enemies.push([startX,-50, speed, enemyWord, wordWidth, wordHeight/2, vx, vy, ax, ay, targetX, false, enemySegmentData.segments]);
 
 	//prints in firebug
 	//console.log("add enemy", enemyWord, enemies.length);
@@ -1872,6 +1990,9 @@ function moveEnemy()
 			enemies[i][8] = 0;
 			enemies[i][9] = 0.015;
 			enemies[i][11] = false;
+		}
+		if (!enemyVertical) {
+			ensureEnemyWordSegments(enemies[i]);
 		}
 
 		enemies[i][6] += enemies[i][8];
@@ -1908,6 +2029,8 @@ function drawEnemy()
 		ctx.fillRect(0,0-enemies[i][5],enemies[i][4],enemies[i][5]);*/
 
 		ctx.font = enemyStyle;
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
 		var shadowR = eHSLA[0];
 		var shadowG = eHSLA[1];
 		var shadowB = eHSLA[2];
@@ -1973,7 +2096,17 @@ function drawEnemy()
 		}
 		else
 		{
-			ctx.fillText(enemies[i][3], 0, 0);
+			var drawSegments = ensureEnemyWordSegments(enemies[i]);
+			if (drawSegments && drawSegments.length) {
+				for (var ds = 0; ds < drawSegments.length; ds++) {
+					if (!drawSegments[ds].active) {
+						continue;
+					}
+					ctx.fillText(drawSegments[ds].text, drawSegments[ds].offsetX, 0);
+				}
+			} else {
+				ctx.fillText(enemies[i][3], 0, 0);
+			}
 		}
 		
 		ctx.restore();
@@ -2210,6 +2343,14 @@ function getLocalText(curFile)
 
 
 //create the current string array
+function stripEnemySourceBracketLabels(text)
+{
+	if (typeof text !== "string") {
+		return text;
+	}
+	return text.replace(/^\s*\[[^\]\r\n]+\]\s*/gm, "");
+}
+
 function getStringArray(curFile)
 {
 	var localText = getLocalText(curFile);
@@ -2220,7 +2361,11 @@ function getStringArray(curFile)
 			request.open("GET", curFile, false);
 			request.send(null);
 			if (request.status >= 200 && request.status < 300 && request.responseText) {
-				wordArray = request.responseText.split(/[\s ]+/);
+				var sourceText = request.responseText;
+				if (curFile === enemySource) {
+					sourceText = stripEnemySourceBracketLabels(sourceText);
+				}
+				wordArray = sourceText.split(/[\s ]+/);
 			}
 			if (wordArray.length > 0) {
 				return wordArray;
@@ -2231,6 +2376,9 @@ function getStringArray(curFile)
 	}
 
 	if (localText !== null) {
+		if (curFile === enemySource) {
+			localText = stripEnemySourceBracketLabels(localText);
+		}
 		return localText.split(/[\s ]+/);
 	}
 
@@ -2248,7 +2396,11 @@ function getStringArraySpecial(curFile)
 			request.open("GET", curFile, false);
 			request.send(null);
 			if (request.status >= 200 && request.status < 300 && request.responseText) {
-				wordArray = request.responseText.split(/[\n\r]+/);
+				var sourceText = request.responseText;
+				if (curFile === enemySource) {
+					sourceText = stripEnemySourceBracketLabels(sourceText);
+				}
+				wordArray = sourceText.split(/[\n\r]+/);
 			}
 			if (wordArray.length > 0) {
 				return wordArray;
@@ -2259,6 +2411,9 @@ function getStringArraySpecial(curFile)
 	}
 
 	if (localText !== null) {
+		if (curFile === enemySource) {
+			localText = stripEnemySourceBracketLabels(localText);
+		}
 		return localText.split(/[\n\r]+/);
 	}
 

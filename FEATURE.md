@@ -113,6 +113,23 @@ Enemy lasers sometimes appear unevenly spaced (some bunch together, some spread 
 3. Move Enable button styling from JS inline styles to dedicated CSS rule with high specificity and controlled class.
 4. Apply same stable pattern to other interface text sizing controls once resolved.
 
+## Session Notes (2026-03-14)
+
+### Tilt Control Parked
+- Tilt functionality is temporarily disabled in code.
+- Reason:
+  - behavior was inconsistent across devices/browsers, especially iPhone/Safari
+  - debugging time was getting disproportionate to current priorities
+- Current intent:
+  - keep touch and non-tilt mobile controls working
+  - return later with a focused tilt-only debugging pass
+
+### Resume Point
+When tilt work resumes:
+- re-enable the `tiltControlEnabled` gate in `data/shoot_21b.js`
+- verify permission flow, baseline recentering, and left/center/right lane switching on iPhone/Safari first
+- only restore the Enable button after sensor input is reliable
+
 ---
 
 ## Feature Template
